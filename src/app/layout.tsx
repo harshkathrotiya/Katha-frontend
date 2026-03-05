@@ -19,18 +19,27 @@ export const metadata: Metadata = {
   description: "A premium digital library for Katha and Granth manuscripts",
 };
 
+import { ThemeProvider } from "@/providers/ThemeProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
+    <html lang="en" className={`${inter.variable} ${outfit.variable}`} suppressHydrationWarning>
       <body className="antialiased min-h-screen">
         <QueryProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </ThemeProvider>
         </QueryProvider>
       </body>
     </html>

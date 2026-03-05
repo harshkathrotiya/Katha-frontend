@@ -6,6 +6,14 @@ import Link from "next/link";
 import { BookOpen, Book, ScrollText } from "lucide-react";
 
 export default function DashboardPage() {
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) return null;
+
     const categories = [
         {
             title: "Katha collection",
@@ -25,16 +33,16 @@ export default function DashboardPage() {
     ];
 
     return (
-        <div className="min-h-full flex flex-col p-8 md:p-12 relative overflow-hidden bg-white">
+        <div className="flex-1 flex flex-col p-8 md:p-12 relative overflow-hidden bg-white dark:bg-slate-950 transition-colors duration-300">
             {/* Top Stat Boxes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
                 {[1, 2, 3, 4].map((i) => (
                     <div
                         key={i}
-                        className="h-32 bg-[#eeeeee] rounded-[24px] hover:shadow-xl hover:shadow-slate-100 transition-all duration-500 cursor-pointer group flex items-center justify-center relative overflow-hidden"
+                        className="h-32 bg-[#eeeeee] dark:bg-slate-900 rounded-[24px] hover:shadow-xl hover:shadow-slate-100 dark:hover:shadow-slate-900/50 transition-all duration-500 cursor-pointer group flex items-center justify-center relative overflow-hidden"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="text-slate-300 font-bold text-lg group-hover:text-[#8b1D1D] group-hover:scale-110 transition-all duration-500">
+                        <div className="absolute inset-0 bg-gradient-to-br from-white/20 dark:from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="text-slate-500 dark:text-slate-400 font-bold text-lg group-hover:text-[#8b1D1D] dark:group-hover:text-[#a32b2b] group-hover:scale-110 transition-all duration-500">
                             {i === 1 && "Total Katha"}
                             {i === 2 && "New Granths"}
                             {i === 3 && "Daily Books"}
@@ -50,24 +58,24 @@ export default function DashboardPage() {
                     <Link
                         key={idx}
                         href={cat.href}
-                        className="group relative bg-white h-52 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 flex items-center justify-between px-10 overflow-hidden border-y border-slate-50"
+                        className="group relative bg-white dark:bg-slate-900 h-52 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 flex items-center justify-between px-10 overflow-hidden border-y border-slate-50 dark:border-slate-800"
                     >
-                        {/* Unique Maroon Side Borders as shown in screenshot */}
-                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3/4 bg-[#8b1D1D] rounded-r-lg shadow-[2px_0_10px_rgba(139,29,29,0.2)]" />
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-3/4 bg-[#8b1D1D] rounded-l-lg shadow-[-2px_0_10px_rgba(139,29,29,0.2)]" />
+                        {/* Unique Maroon Side Borders */}
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1.5 h-3/4 bg-[#8b1D1D] dark:bg-[#a32b2b] rounded-r-lg shadow-[2px_0_10px_rgba(139,29,29,0.2)]" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-3/4 bg-[#8b1D1D] dark:bg-[#a32b2b] rounded-l-lg shadow-[-2px_0_10px_rgba(139,29,29,0.2)]" />
 
                         {/* Title */}
-                        <h2 className="text-[28px] font-bold text-[#8b1D1D] leading-[1.2] font-outfit max-w-[150px]">
+                        <h2 className="text-[28px] font-bold text-[#8b1D1D] dark:text-[#a32b2b] leading-[1.2] font-outfit max-w-[150px]">
                             {cat.title}
                         </h2>
 
                         {/* Icon */}
-                        <div className="group-hover:scale-110 transition-transform duration-500 bg-slate-50 p-4 rounded-3xl group-hover:bg-maroon/5">
+                        <div className="group-hover:scale-110 transition-transform duration-500 bg-slate-50 dark:bg-slate-800 p-4 rounded-3xl group-hover:bg-maroon/5 dark:group-hover:bg-maroon/20">
                             {cat.icon}
                         </div>
 
-                        {/* Creative Hover Effect: Subtle radial glow */}
-                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-maroon/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                        {/* Creative Hover Effect */}
+                        <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-maroon/5 dark:bg-maroon/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     </Link>
                 ))}
             </div>
@@ -75,20 +83,21 @@ export default function DashboardPage() {
             {/* Bottom Visual Elements */}
             <div className="mt-auto pt-24 pb-4 flex flex-col items-center justify-center">
                 {/* Silhouette Effect */}
-                <div className="absolute bottom-0 left-0 w-full opacity-[0.05] pointer-events-none select-none">
+                <div className="absolute bottom-0 left-0 w-full opacity-[0.05] dark:opacity-[0.11] pointer-events-none select-none invert dark:invert-0 z-0">
                     <Image
                         src="/images/SGVP-building.png"
                         alt="Temple Silhouette"
                         width={1600}
                         height={500}
-                        className="w-full h-auto object-bottom scale-110 translate-y-10"
+                        className="w-full h-auto object-bottom scale-105 translate-y-[2px]"
+                        priority
                     />
                 </div>
 
                 {/* Diagonal Decor Lines (from screenshot) */}
-                <div className="absolute bottom-20 left-1/4 w-[1px] h-32 bg-gradient-to-t from-slate-200 to-transparent rotate-[60deg] opacity-40 hidden lg:block" />
-                <div className="absolute bottom-10 left-1/2 w-[1px] h-48 bg-gradient-to-t from-slate-200 to-transparent opacity-40 hidden lg:block" />
-                <div className="absolute bottom-20 right-1/4 w-[1px] h-32 bg-gradient-to-t from-slate-200 to-transparent -rotate-[60deg] opacity-40 hidden lg:block" />
+                <div className="absolute bottom-20 left-1/4 w-[1px] h-32 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent rotate-[60deg] opacity-40 hidden lg:block" />
+                <div className="absolute bottom-10 left-1/2 w-[1px] h-48 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent opacity-40 hidden lg:block" />
+                <div className="absolute bottom-20 right-1/4 w-[1px] h-32 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent -rotate-[60deg] opacity-40 hidden lg:block" />
 
                 {/* SGVP Logo */}
                 <div className="relative z-20 hover:scale-105 transition-transform duration-500 cursor-pointer">
@@ -97,7 +106,7 @@ export default function DashboardPage() {
                         alt="SGVP Logo"
                         width={160}
                         height={60}
-                        className="h-12 w-auto object-contain"
+                        className="h-12 w-auto object-contain dark:brightness-125"
                     />
                 </div>
             </div>

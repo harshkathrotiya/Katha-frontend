@@ -10,17 +10,38 @@ interface NavItem {
     icon: React.ReactNode;
 }
 
-import { Search, Bell, Moon, User, ChevronDown } from "lucide-react";
+import { Search, Bell, Moon, Sun, User, ChevronDown, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const { theme, setTheme, resolvedTheme } = useTheme();
+    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    // Avoid hydration mismatch
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const handleLogout = () => {
+        // Clear the auth_token cookie
+        document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        router.push("/login");
+    };
+
+    const toggleTheme = () => {
+        setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-900 flex flex-col">
+        <div className="min-h-screen bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-300">
             {/* Header */}
-            <header className="h-20 flex items-center justify-between px-8 bg-white border-b border-slate-100 sticky top-0 z-50">
+            <header className="h-20 flex items-center justify-between px-8 bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50 transition-colors">
                 <div className="flex items-center gap-2">
-                    <span className="text-2xl font-bold text-[#8b1D1D] font-outfit">Satsang Katha SGVP</span>
+                    <span className="text-2xl font-bold text-[#8b1D1D] dark:text-[#a32b2b] font-outfit">Satsang Katha SGVP</span>
                 </div>
 
                 <div className="flex items-center gap-6">
@@ -30,13 +51,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <input
                             type="text"
                             placeholder=""
-                            className="w-64 h-10 pl-10 pr-4 bg-[#F8F9FA] border-none rounded-full text-sm focus:ring-1 focus:ring-maroon/20 outline-none"
+                            className="w-64 h-10 pl-10 pr-4 bg-[#F8F9FA] dark:bg-slate-900 border-none rounded-full text-sm focus:ring-1 focus:ring-maroon/20 outline-none dark:text-slate-200"
                         />
                     </div>
 
                     <div className="flex items-center gap-4 text-slate-400">
-                        <button className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                            <Moon className="h-5 w-5" />
+                        <button
+                            className="p-2 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-colors"
+                            onClick={toggleTheme}
+                        >
+                            {mounted && resolvedTheme === "dark" ? (
+                                <Sun className="h-5 w-5 text-amber-400" />
+                            ) : (
+                                <Moon className="h-5 w-5" />
+                            )}
                         </button>
                         <div className="relative">
                             <button className="p-2 hover:bg-slate-50 rounded-full transition-colors">
@@ -46,20 +74,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 pl-4 border-l border-slate-100">
-                        <div className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded-full cursor-pointer transition-colors group">
+                    <div className="flex items-center gap-3 pl-4 border-l border-slate-100 relative">
+                        <div
+                            className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded-full cursor-pointer transition-colors group"
+                            onClick={() => setIsProfileOpen(!isProfileOpen)}
+                        >
                             <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center border-2 border-slate-200">
                                 <User className="h-4 w-4 text-slate-600" />
                             </div>
                             <span className="text-sm font-semibold text-slate-700">Admin</span>
-                            <ChevronDown className="h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
+                            <ChevronDown className={`h-4 w-4 text-slate-400 group-hover:text-slate-600 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                         </div>
+
+                        {/* Dropdown Menu */}
+                        {isProfileOpen && (
+                            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                                <button
+                                    onClick={handleLogout}
+                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-[#8b1D1D] transition-colors"
+                                >
+                                    <LogOut className="h-4 w-4" />
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </header>
 
             {/* Main Content Area */}
-            <main className="flex-1 bg-white relative">
+            <main className="flex-1 relative flex flex-col">
                 {children}
             </main>
         </div>
