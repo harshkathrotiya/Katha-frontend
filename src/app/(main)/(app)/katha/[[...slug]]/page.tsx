@@ -57,7 +57,7 @@ const KathaCard = ({ title, date = "Oct 2024" }: { title: string; date?: string 
             <div className="w-4 h-4 bg-[#8b1D1D] rounded-full shadow-[0_0_20px_rgba(139,29,29,0.4)]" />
           </div>
           <div className="text-[#8b1D1D] font-black text-3xl tracking-tighter font-outfit uppercase leading-[0.9] mb-2 pointer-events-none select-none">Satsang</div>
-          <div className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-[0.4em] pointer-events-none select-none">SGVP Archive</div>
+          <div className="text-slate-400 dark:text-slate-500 font-bold text-[10px] uppercase tracking-[0.4em] pointer-events-none select-none">SGVP Katha</div>
         </div>
 
         {/* Bottom Title Tray */}
