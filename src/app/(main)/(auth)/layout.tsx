@@ -8,11 +8,11 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 {/* Center Logo */}
                 <div className="mt-[160px] relative z-10 translate-x-[10px] transition-all duration-500">
                     <Image
-                        src="/images/book-logo.jpeg"
+                        src="/images/book-logo.png"
                         alt="Katha Logo"
                         width={224}
                         height={224}
-                        className="rounded-full border-[3px] border-maroon shadow-lg"
+                        className="object-contain"
                         priority
                     />
                 </div>
