@@ -83,32 +83,32 @@ export default function DashboardPage() {
             {/* Bottom Visual Elements */}
             <div className="mt-auto pt-12 md:pt-24 pb-4 flex flex-col items-center justify-center">
                 {/* Silhouette Effect */}
-                <div className="absolute bottom-0 left-0 w-full opacity-[0.05] dark:opacity-[0.11] pointer-events-none select-none invert dark:invert-0 z-0 overflow-hidden h-[150px] md:h-auto">
+                <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 w-full max-w-[1600px] opacity-[0.11] dark:opacity-[0.2] pointer-events-none select-none invert dark:invert-0 z-0 overflow-visible h-48 md:h-[420px]">
                     <Image
                         src="/images/SGVP-building.png"
                         alt="Temple Silhouette"
                         width={1600}
                         height={500}
-                        className="w-full h-full md:h-auto object-bottom md:object-contain scale-125 md:scale-105 translate-y-[10px] md:translate-y-[2px]"
+                        className="w-full h-full object-bottom md:object-contain scale-[1.4] md:scale-[1.25] translate-y-0"
                         priority
                     />
                 </div>
 
-                {/* Diagonal Decor Lines (from screenshot) - Hidden on Mobile */}
-                <div className="absolute bottom-20 left-1/4 w-[1px] h-32 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent rotate-[60deg] opacity-40 hidden xl:block" />
-                <div className="absolute bottom-10 left-1/2 w-[1px] h-48 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent opacity-40 hidden xl:block" />
-                <div className="absolute bottom-20 right-1/4 w-[1px] h-32 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent -rotate-[60deg] opacity-40 hidden xl:block" />
+                {/* Left/Right Diagonal Decor Lines (from screenshot) */}
+                <div className="absolute bottom-10 left-[18%] w-[1px] h-64 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent rotate-[65deg] opacity-50 hidden xl:block z-10" />
+                <div className="absolute bottom-10 right-[18%] w-[1px] h-64 bg-gradient-to-t from-slate-200 dark:from-slate-800 to-transparent -rotate-[65deg] opacity-50 hidden xl:block z-10" />
 
-                {/* SGVP Logo */}
-                <div className="relative z-20 hover:scale-105 transition-transform duration-500 cursor-pointer pt-8 md:pt-0">
+                {/* SGVP Logo - Centered over building silhouette */}
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 hover:scale-105 transition-transform duration-500 cursor-pointer">
                     <Image
                         src="/images/Logoooo.png"
                         alt="SGVP Logo"
-                        width={160}
-                        height={60}
+                        width={140}
+                        height={50}
                         className="h-8 md:h-12 w-auto object-contain dark:brightness-125"
                     />
                 </div>
+                <div className="h-24 md:h-48 w-full" /> {/* Spacer to allow absolute elements space */}
             </div>
         </div>
     );
