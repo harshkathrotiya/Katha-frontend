@@ -31,12 +31,12 @@ export default function AdminDashboard() {
     };
 
     if (isLoading) {
-        return <div className="p-8 animate-pulse text-slate-400">Loading live stats...</div>;
+        return <div className="p-8 animate-pulse text-slate-400 font-bold">Please wait...</div>;
     }
 
     const statCards = [
         { label: "Total Users", value: stats?.totalUsers || "0", color: "bg-blue-50" },
-        { label: "Pending Approvals", value: stats?.pendingApprovals || "0", color: "bg-orange-50" },
+        { label: "New Requests", value: stats?.pendingApprovals || "0", color: "bg-orange-50" },
         { label: "Total Files", value: stats?.totalFiles || "0", color: "bg-green-50" },
         { label: "Storage Used", value: formatBytes(stats?.totalStorageUsed), color: "bg-purple-50" },
     ];
@@ -53,16 +53,16 @@ export default function AdminDashboard() {
             </div>
 
             <div className="mt-12">
-                <h2 className="text-xl font-semibold mb-4 text-slate-700">Quick Actions</h2>
+                <h2 className="text-xl font-bold mb-6 text-slate-700">Go to:</h2>
                 <div className="flex flex-wrap gap-4">
                     <Link href="/admin/devices" className="bg-[#8b1c1c] text-white px-6 py-3 rounded-xl hover:bg-red-900 transition-colors font-bold shadow-lg shadow-red-900/10">
-                        Approve New Devices
+                        Approve Phones/PCs
                     </Link>
                     <Link href="/admin/users" className="bg-slate-800 text-white px-6 py-3 rounded-xl hover:bg-slate-900 transition-colors font-bold shadow-lg shadow-slate-900/10">
-                        Manage Users
+                        See All Users
                     </Link>
                     <Link href="/admin/storage" className="bg-white border border-slate-200 text-slate-600 px-6 py-3 rounded-xl hover:bg-slate-50 transition-colors font-bold">
-                        Browse Storage
+                        Check Storage
                     </Link>
                 </div>
             </div>

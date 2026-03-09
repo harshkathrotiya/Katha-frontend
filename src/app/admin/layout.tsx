@@ -23,9 +23,9 @@ import { useTheme } from "next-themes";
 
 const menuItems = [
     { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
-    { name: "User Management", href: "/admin/users", icon: Users },
-    { name: "Device Approvals", href: "/admin/devices", icon: Smartphone },
-    { name: "Storage Management", href: "/admin/storage", icon: Database },
+    { name: "Users", href: "/admin/users", icon: Users },
+    { name: "Approve Devices", href: "/admin/devices", icon: Smartphone },
+    { name: "Storage Space", href: "/admin/storage", icon: Database },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -161,19 +161,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         {isSidebarOpen && (
                             <div className="flex-1 min-w-0 animate-in fade-in">
                                 <p className={`text-xs font-bold truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>Administrator</p>
-                                <p className="text-[9px] text-slate-400 font-medium tracking-wide">Root Access</p>
+                                <p className="text-[9px] text-slate-400 font-medium tracking-wide">Main Admin</p>
                             </div>
                         )}
                     </div>
 
                     <button
                         onClick={logout}
-                        title={!isSidebarOpen ? "Exit Console" : ""}
+                        title={!isSidebarOpen ? "Logout" : ""}
                         className={`flex items-center rounded-lg transition-all text-red-500 group ${isSidebarOpen ? "w-full gap-2.5 px-3 py-2.5" : "p-2.5 justify-center w-10 h-10 mx-auto"
                             } hover:bg-red-50/50 dark:hover:bg-red-950/20`}
                     >
                         <LogOut size={16} strokeWidth={2.5} className="text-red-400/80" />
-                        {isSidebarOpen && <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Exit Console</span>}
+                        {isSidebarOpen && <span className="text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Logout</span>}
                     </button>
                 </div>
             </aside>
@@ -185,10 +185,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="flex items-center gap-6">
                         <div className="flex items-center gap-3">
                             <h2 className={`text-lg font-bold tracking-tight ${isDark ? "text-slate-100" : "text-slate-900"}`}>
-                                {menuItems.find(i => pathname.startsWith(i.href))?.name || "System"}
+                                {menuItems.find(i => pathname.startsWith(i.href))?.name || "Home"}
                             </h2>
                             <span className="w-1 h-3 rounded-full bg-slate-200/50" />
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">Live Workspace</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">System Online</span>
                         </div>
                     </div>
 
@@ -209,7 +209,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 className={`px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider transition-all border ${isDark ? "bg-slate-800/20 border-slate-700/30 hover:bg-slate-700/30 text-slate-300" : "bg-white border-slate-100 hover:bg-slate-50 text-slate-500"
                                     }`}
                             >
-                                Sync Status
+                                Update
                             </button>
                         )}
 
@@ -220,7 +220,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                     } flex items-center gap-2`}
                             >
                                 <Database size={14} />
-                                Refresh Stats
+                                Update
                             </button>
                         )}
                     </div>

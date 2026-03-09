@@ -34,10 +34,14 @@ export default function LoginPage() {
 
             if (response.success) {
                 const { user, tokens } = response.data;
+                const deviceId = "web-browser";
 
-                // Store tokens
+                // Store tokens and identifiers for refresh logic
                 localStorage.setItem("auth_token", tokens.accessToken);
+                localStorage.setItem("refresh_token", tokens.refreshToken);
+                localStorage.setItem("user_id", user.id);
                 localStorage.setItem("user_role", user.role);
+                localStorage.setItem("device_id", deviceId);
 
                 // Set cookie for middleware (server-side protection)
                 document.cookie = `auth_token=${tokens.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}`;

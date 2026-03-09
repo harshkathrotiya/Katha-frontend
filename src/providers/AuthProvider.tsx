@@ -45,14 +45,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkAuth();
     }, []);
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+            const token = localStorage.getItem("auth_token");
+            if (token) {
+                // Fire and forget logout on backend
+                fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/auth/logout`, {
+                    method: "POST",
+                    headers: { "Authorization": `Bearer ${token}` }
+                }).catch(() => { });
+            }
+        } catch (e) { }
+
         // Clear cookies
         document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
         // Clear storage
         localStorage.removeItem("auth_token");
+        localStorage.removeItem("refresh_token");
         localStorage.removeItem("user_role");
+        localStorage.removeItem("user_id");
+        localStorage.removeItem("device_id");
 
         setUser(null);
         window.location.href = "/login";

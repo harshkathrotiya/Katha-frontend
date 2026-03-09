@@ -51,7 +51,7 @@ export default function UsersPage() {
 
     useEffect(() => {
         fetchUsers();
-        const handleOpenModal = () => showModal("CREATE", "Add New User");
+        const handleOpenModal = () => showModal("CREATE", "Add User");
         window.addEventListener("open-add-user-modal", handleOpenModal);
         return () => window.removeEventListener("open-add-user-modal", handleOpenModal);
     }, []);
@@ -84,12 +84,12 @@ export default function UsersPage() {
             });
             if (response.success) {
                 closeModal();
-                showModal("SUCCESS", "User Added!", null, `${formData.name} is now registered in the system.`);
+                showModal("SUCCESS", "Done!", null, `${formData.name} is now in the list.`);
                 fetchUsers();
             }
         } catch (error: any) {
             const title = error.error?.code === "VALIDATION_ERROR" ? "Check Details" :
-                error.error?.code === "EMAIL_EXISTS" ? "Email Already Exists" : "Something Went Wrong";
+                error.error?.code === "EMAIL_EXISTS" ? "Email Already Exists" : "Error";
             showModal("ERROR", title, null, error.message);
         }
     };
@@ -109,7 +109,7 @@ export default function UsersPage() {
 
             if (response.success) {
                 closeModal();
-                showModal("SUCCESS", "Changes Saved", null, `Information for ${formData.name} has been updated.`);
+                showModal("SUCCESS", "Updated!", null, `User info updated.`);
                 fetchUsers();
             }
         } catch (error: any) {
@@ -123,11 +123,11 @@ export default function UsersPage() {
             const response = await api.delete(`/admin/users/${modalConfig.data.id}`);
             if (response.success) {
                 closeModal();
-                showModal("SUCCESS", "User Deleted", null, "The user and their files have been removed from the system.");
+                showModal("SUCCESS", "Removed!", null, "The user has been removed from list.");
                 fetchUsers();
             }
         } catch (error: any) {
-            const title = error.error?.code === "LAST_ADMIN_PROTECTION" ? "Security Rule" : "Delete Blocked";
+            const title = error.error?.code === "LAST_ADMIN_PROTECTION" ? "Security Rule" : "Cant Delete";
             showModal("ERROR", title, null, error.message);
         }
     };
@@ -144,7 +144,7 @@ export default function UsersPage() {
             <div className="p-12 flex items-center justify-center min-h-[500px]">
                 <div className="relative">
                     <div className="w-20 h-20 border-4 border-maroon/10 border-t-maroon rounded-full animate-spin" />
-                    <p className="mt-4 text-slate-400 font-bold">Loading Users...</p>
+                    <p className="mt-4 text-slate-400 font-bold">Please Wait...</p>
                 </div>
             </div>
         );
@@ -205,16 +205,16 @@ export default function UsersPage() {
                                 <TableCell className="text-right py-4 px-6">
                                     <div className="flex justify-end gap-1">
                                         <button
-                                            onClick={() => showModal("EDIT", "Edit User", user)}
+                                            onClick={() => showModal("EDIT", "Change Details", user)}
                                             className={`p-2 rounded-lg transition-all ${isDarkMode ? "text-slate-500 hover:text-slate-200 hover:bg-slate-800" : "text-slate-400 hover:text-slate-900 hover:bg-slate-100/50"}`}
-                                            title="Edit user details"
+                                            title="Change User"
                                         >
                                             <Edit2 size={15} />
                                         </button>
                                         <button
-                                            onClick={() => showModal("DELETE", "Delete User", user)}
+                                            onClick={() => showModal("DELETE", "Delete", user)}
                                             className={`p-2 rounded-lg transition-all ${isDarkMode ? "text-slate-500 hover:text-red-400 hover:bg-red-500/10" : "text-slate-400 hover:text-red-600 hover:bg-red-50/50"}`}
-                                            title="Remove user"
+                                            title="Delete"
                                         >
                                             <Trash2 size={15} />
                                         </button>
@@ -236,14 +236,14 @@ export default function UsersPage() {
                         <Button variant="outline" className="rounded-xl px-6" onClick={closeModal} type="button">Cancel</Button>
                         {modalConfig.type === "DELETE" ? (
                             <Button className="bg-red-600 hover:bg-red-700 text-white rounded-xl px-8 font-bold" type="submit" form="delete-user-form">
-                                Delete User
+                                Delete
                             </Button>
                         ) : modalConfig.type === "CREATE" ? (
-                            <Button variant="maroon" className="rounded-xl px-8 font-bold" form="admin-user-form" type="submit">Add User</Button>
+                            <Button variant="maroon" className="rounded-xl px-8 font-bold" form="admin-user-form" type="submit">Add</Button>
                         ) : modalConfig.type === "EDIT" ? (
-                            <Button variant="maroon" className="rounded-xl px-8 font-bold" form="admin-user-form" type="submit">Save Changes</Button>
+                            <Button variant="maroon" className="rounded-xl px-8 font-bold" form="admin-user-form" type="submit">Save</Button>
                         ) : (
-                            <Button variant="maroon" className="rounded-xl px-10 font-bold" type="submit" form="status-modal-form">Continue</Button>
+                            <Button variant="maroon" className="rounded-xl px-10 font-bold" type="submit" form="status-modal-form">OK</Button>
                         )}
                     </div>
                 }
@@ -262,10 +262,10 @@ export default function UsersPage() {
                             <div className="space-y-2 group">
                                 <div className="flex items-center gap-2 mb-1 px-1">
                                     <User size={14} className="text-slate-400" />
-                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Full Name</label>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Name</label>
                                 </div>
                                 <Input
-                                    placeholder="Enter Name"
+                                    placeholder="Type Name"
                                     value={formData.name}
                                     className={`rounded-xl h-12 border-slate-200 text-sm font-medium ${isDarkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-900"}`}
                                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -275,10 +275,10 @@ export default function UsersPage() {
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2 mb-1 px-1">
                                     <Mail size={14} className="text-slate-400" />
-                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Email Address</label>
+                                    <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Email</label>
                                 </div>
                                 <Input
-                                    placeholder="email@address.com"
+                                    placeholder="Enter Email"
                                     type="email"
                                     value={formData.email}
                                     className={`rounded-xl h-12 border-slate-200 text-sm font-medium ${isDarkMode ? "bg-slate-800 text-slate-200" : "bg-white text-slate-900"}`}
@@ -290,7 +290,7 @@ export default function UsersPage() {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2 mb-1 px-1">
                                         <Shield size={14} className="text-slate-400" />
-                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">User Type</label>
+                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">User Role</label>
                                     </div>
                                     <select
                                         className={`w-full h-14 rounded-2xl border-transparent px-5 text-sm font-bold focus:ring-2 focus:ring-maroon/20 outline-none appearance-none cursor-pointer ${isDarkMode ? "bg-slate-800 text-slate-200" : "bg-slate-50 text-slate-900"}`}
@@ -304,7 +304,7 @@ export default function UsersPage() {
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2 mb-1 px-1">
                                         <Database size={14} className="text-slate-400" />
-                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Storage Limit (GB)</label>
+                                        <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Storage Limit</label>
                                     </div>
                                     <Input
                                         placeholder="10"
@@ -322,7 +322,7 @@ export default function UsersPage() {
                                     <label className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Password</label>
                                 </div>
                                 <Input
-                                    placeholder={modalConfig.type === "EDIT" ? "Leave empty to keep same" : "At least 6 letters"}
+                                    placeholder={modalConfig.type === "EDIT" ? "Leave empty to keep same" : "Min 6 letters"}
                                     type="password"
                                     value={formData.password}
                                     className={`rounded-2xl h-14 border-transparent transition-all text-sm font-bold placeholder:text-slate-400 ${isDarkMode ? "bg-slate-800 text-slate-200" : "bg-slate-50 text-slate-900 focus:bg-white"}`}
@@ -347,9 +347,9 @@ export default function UsersPage() {
                             <Trash2 size={40} />
                         </div>
                         <div>
-                            <p className={`text-lg font-bold tracking-tight ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Are you sure?</p>
+                            <p className={`text-lg font-bold tracking-tight ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}>Delete this user?</p>
                             <p className="text-sm text-slate-500 mt-3 max-w-[320px] font-medium leading-relaxed">
-                                You are deleting <span className={isDarkMode ? "text-slate-100 font-bold" : "text-slate-900 font-bold"}>{modalConfig.data?.name}</span>. This will also delete all their files. You cannot undo this action.
+                                You are deleting <span className={isDarkMode ? "text-slate-100 font-bold" : "text-slate-900 font-bold"}>{modalConfig.data?.name}</span>. This will delete all their data too. You cannot get it back.
                             </p>
                         </div>
                     </form>
@@ -366,8 +366,8 @@ export default function UsersPage() {
                         }}
                     >
                         <div className={`w-24 h-24 rounded-[2.5rem] flex items-center justify-center border shadow-inner transition-colors ${modalConfig.type === "SUCCESS"
-                                ? isDarkMode ? "bg-emerald-900/20 border-emerald-900/40 text-emerald-500" : "bg-emerald-50 border-emerald-100 text-emerald-500"
-                                : isDarkMode ? "bg-red-900/20 border-red-900/40 text-red-500" : "bg-red-50 border-red-100 text-red-500"
+                            ? isDarkMode ? "bg-emerald-900/20 border-emerald-900/40 text-emerald-500" : "bg-emerald-50 border-emerald-100 text-emerald-500"
+                            : isDarkMode ? "bg-red-900/20 border-red-900/40 text-red-500" : "bg-red-50 border-red-100 text-red-500"
                             }`}>
                             {modalConfig.type === "SUCCESS" ? <CheckCircle2 size={48} strokeWidth={1.5} /> : <AlertCircle size={48} strokeWidth={1.5} />}
                         </div>

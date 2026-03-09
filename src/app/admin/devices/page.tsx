@@ -53,10 +53,10 @@ export default function DevicesPage() {
             setActionLoading(deviceId);
             const response = await api.post("/admin/devices/approve", { userId, deviceId });
             if (response.success) {
-                showStatus("Access Granted", "The device has been successfully approved. The user can now log in from this device.", "success");
+                showStatus("Approved!", "The user can now use this device to login.", "success");
                 fetchDevices();
             } else {
-                showStatus("Approval Failed", response.message || "Something went wrong while approving the device.", "error");
+                showStatus("Error", response.message || "Could not approve this device.", "error");
             }
         } catch (error: any) {
             showStatus("Error", error.message || "Failed to communicate with the server. Please try again later.", "error");
@@ -74,7 +74,7 @@ export default function DevicesPage() {
             <div className="p-8 flex items-center justify-center min-h-[400px]">
                 <div className="flex flex-col items-center gap-4">
                     <div className="w-12 h-12 border-4 border-[#8b1c1c]/20 border-t-[#8b1c1c] rounded-full animate-spin" />
-                    <p className="text-slate-500 font-medium tracking-tight">Syncing Approval Queue...</p>
+                    <p className="text-slate-500 font-medium tracking-tight">Wait a moment...</p>
                 </div>
             </div>
         );
@@ -86,9 +86,9 @@ export default function DevicesPage() {
                 }`}>
                 <ShieldCheck size={20} className="text-emerald-500 shrink-0 mt-0.5" />
                 <div>
-                    <h4 className={`text-sm font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-900"}`}>Security Protocol Active</h4>
+                    <h4 className={`text-sm font-bold ${isDarkMode ? "text-emerald-400" : "text-emerald-900"}`}>Security is On</h4>
                     <p className={`text-xs mt-1 max-w-2xl font-medium leading-relaxed ${isDarkMode ? "text-emerald-500/70" : "text-emerald-800/70"}`}>
-                        Device-level authorization is enabled. Each login request below must be manually approved to verify security.
+                        Every new phone or computer must be approved by you here before they can login.
                     </p>
                 </div>
             </div>
@@ -97,9 +97,9 @@ export default function DevicesPage() {
                 <Table>
                     <TableHeader className={`${isDarkMode ? "border-slate-800/20" : "border-slate-100/60"}`}>
                         <TableRow className="hover:bg-transparent transition-none border-b">
-                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Requested By</TableHead>
-                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Device</TableHead>
-                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Timestamp</TableHead>
+                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">User</TableHead>
+                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Phone/PC</TableHead>
+                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Date</TableHead>
                             <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Status</TableHead>
                             <TableHead className="text-right py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Actions</TableHead>
                         </TableRow>
@@ -110,7 +110,7 @@ export default function DevicesPage() {
                                 <TableCell colSpan={5} className="text-center py-24">
                                     <div className="flex flex-col items-center gap-3 opacity-30">
                                         <CheckCircle size={32} className="text-slate-400" />
-                                        <p className="text-slate-500 font-bold text-sm">Safe environment. Zero pending requests.</p>
+                                        <p className="text-slate-500 font-bold text-sm">All clear! No new requests.</p>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -138,7 +138,7 @@ export default function DevicesPage() {
                                             ? isDarkMode ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-emerald-50 text-emerald-600 border-emerald-100"
                                             : isDarkMode ? "bg-orange-500/10 text-orange-400 border-orange-500/20" : "bg-orange-50 text-orange-600 border-orange-100"
                                             }`}>
-                                            {device.approved ? "VERIFIED" : "REVIEWING"}
+                                            {device.approved ? "DONE" : "WAITING"}
                                         </span>
                                     </TableCell>
                                     <TableCell className="text-right py-4 px-6">
@@ -148,7 +148,7 @@ export default function DevicesPage() {
                                                 disabled={actionLoading === device.deviceId}
                                                 className="bg-[#8b1c1c] text-white px-4 py-2 rounded-lg text-[11px] font-bold uppercase tracking-wider hover:bg-[#6b1515] transition-all disabled:opacity-50 shadow-sm"
                                             >
-                                                {actionLoading === device.deviceId ? "PROCESSING" : "ALLOW ACCESS"}
+                                                {actionLoading === device.deviceId ? "Please wait..." : "Approve"}
                                             </button>
                                             <button
                                                 onClick={handleBlock}
@@ -173,7 +173,7 @@ export default function DevicesPage() {
                 title={modal.title}
                 footer={
                     <Button variant="maroon" className="rounded-xl px-8" type="submit" form="device-status-form">
-                        Continue
+                        OK
                     </Button>
                 }
             >

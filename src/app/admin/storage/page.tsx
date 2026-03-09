@@ -73,7 +73,7 @@ export default function StoragePage() {
                 setModal({ ...modal, isOpen: false });
                 setStatusModal({
                     isOpen: true,
-                    title: "Quota Updated",
+                    title: "Limit Changed!",
                     message: `Storage limit for ${modal.user.name} has been increased to ${modal.newQuota} GB.`
                 });
                 fetchData();
@@ -110,7 +110,7 @@ export default function StoragePage() {
                     <CloudLightning size={24} strokeWidth={2.5} />
                 </div>
                 <div>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">Infrastructure Capacity</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em] mb-1">Total Storage Used</p>
                     <div className="flex items-baseline gap-2">
                         <span className={`text-2xl font-bold tracking-tight ${isDarkMode ? "text-slate-200" : "text-slate-900"}`}>{formatBytes(stats.totalUsed)}</span>
                         <span className="text-slate-300 font-medium">/</span>
@@ -123,9 +123,9 @@ export default function StoragePage() {
                 <Table>
                     <TableHeader className={`${isDarkMode ? "border-slate-800/20" : "border-slate-100/60"}`}>
                         <TableRow className="hover:bg-transparent transition-none border-b">
-                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Account</TableHead>
-                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Live Usage</TableHead>
-                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Allocation</TableHead>
+                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">User</TableHead>
+                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Used</TableHead>
+                            <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Limit</TableHead>
                             <TableHead className="py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Status</TableHead>
                             <TableHead className="text-right py-4 px-6 text-[11px] font-bold uppercase text-slate-400 tracking-wider">Actions</TableHead>
                         </TableRow>
@@ -147,7 +147,7 @@ export default function StoragePage() {
                                         <div className="flex flex-col gap-1.5 min-w-[200px]">
                                             <div className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-wider">
                                                 <span>{formatBytes(user.storageUsed)}</span>
-                                                <span className={isNearLimit ? "text-red-500" : ""}>{Math.round(percent)}% UTILIZED</span>
+                                                <span className={isNearLimit ? "text-red-500" : ""}>{Math.round(percent)}% USED</span>
                                             </div>
                                             <div className={`w-full h-1.5 rounded-full overflow-hidden p-0.5 border ${isDarkMode ? "bg-slate-800/50 border-slate-700/30" : "bg-slate-50 border-slate-100"
                                                 }`}>
@@ -165,12 +165,12 @@ export default function StoragePage() {
                                         {isNearLimit ? (
                                             <div className="flex items-center gap-1.5 text-red-500 font-bold text-[9px] uppercase tracking-widest bg-red-500/5 px-2 py-0.5 rounded-lg border border-red-500/20 inline-flex">
                                                 <AlertTriangle size={10} />
-                                                Action Required
+                                                Almost Full
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-1.5 text-emerald-500 font-bold text-[9px] uppercase tracking-widest bg-emerald-500/5 px-2 py-0.5 rounded-lg border border-emerald-500/20 inline-flex">
                                                 <CheckCircle2 size={10} />
-                                                Optimized
+                                                OK
                                             </div>
                                         )}
                                     </TableCell>
@@ -180,7 +180,7 @@ export default function StoragePage() {
                                             className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all ${isDarkMode ? "bg-slate-800 text-slate-300 hover:bg-slate-700" : "bg-slate-900 text-white hover:bg-slate-800"
                                                 }`}
                                         >
-                                            Modify Quota
+                                            Change Limit
                                         </button>
                                     </TableCell>
                                 </TableRow>
@@ -199,7 +199,7 @@ export default function StoragePage() {
                     <div className="flex justify-end gap-3 w-full">
                         <Button variant="outline" className="rounded-xl px-6" onClick={() => setModal({ ...modal, isOpen: false })} type="button">Cancel</Button>
                         <Button variant="maroon" className="rounded-xl px-8" form="storage-quota-form" type="submit" disabled={isUpdating}>
-                            {isUpdating ? "Saving..." : "Update Quota"}
+                            {isUpdating ? "Saving..." : "Save Limit"}
                         </Button>
                     </div>
                 }
@@ -218,19 +218,19 @@ export default function StoragePage() {
                         </div>
                         <div>
                             <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{modal.user?.name}</p>
-                            <p className="text-xs text-slate-500">Current Usage: {formatBytes(modal.user?.storageUsed || 0)}</p>
+                            <p className="text-xs text-slate-500">Currently Used: {formatBytes(modal.user?.storageUsed || 0)}</p>
                         </div>
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">New Allocation (GB)</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider ml-1">New Limit (GB)</label>
                         <Input
                             type="number"
                             value={modal.newQuota}
                             className="text-lg font-bold rounded-xl h-14 border-slate-200 dark:border-slate-700 px-5 focus:ring-maroon"
                             onChange={(e) => setModal({ ...modal, newQuota: e.target.value })}
                         />
-                        <p className="text-[11px] text-slate-400 ml-1 italic font-medium">Enter the total capacity in Gigabytes</p>
+                        <p className="text-[11px] text-slate-400 ml-1 italic font-medium">Type how many GB you want to give</p>
                     </div>
                 </form>
             </Modal>
@@ -239,10 +239,10 @@ export default function StoragePage() {
             <Modal
                 isOpen={statusModal.isOpen}
                 onClose={() => setStatusModal({ ...statusModal, isOpen: false })}
-                title="Operation Successful"
+                title="Done!"
                 footer={
                     <Button variant="maroon" className="rounded-xl px-10 h-10 text-[10px] font-bold uppercase tracking-wider" type="submit" form="storage-success-form">
-                        Excellent
+                        OK
                     </Button>
                 }
             >
