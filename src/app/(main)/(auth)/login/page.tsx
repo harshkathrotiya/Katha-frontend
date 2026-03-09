@@ -24,17 +24,23 @@ export default function LoginPage() {
             const email = formData.get("email") as string;
             const password = formData.get("password") as string;
 
+            // Get or create a unique device ID for this browser
+            let deviceId = localStorage.getItem("device_id");
+            if (!deviceId) {
+                deviceId = `web-${Math.random().toString(36).substring(2, 15)}-${Date.now().toString(36)}`;
+                localStorage.setItem("device_id", deviceId);
+            }
+
             // Call the login API
             const response = await api.post("/auth/login", {
                 email,
                 password,
-                deviceId: "web-browser", // Default for now
-                deviceName: "Chrome/Safari Web"
+                deviceId,
+                deviceName: "Web Browser"
             });
 
             if (response.success) {
                 const { user, tokens } = response.data;
-                const deviceId = "web-browser";
 
                 // Store tokens and identifiers for refresh logic
                 localStorage.setItem("auth_token", tokens.accessToken);
