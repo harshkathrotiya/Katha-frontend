@@ -14,16 +14,16 @@ export function middleware(request: NextRequest) {
         if (role === "ADMIN") {
             return NextResponse.redirect(new URL("/admin/dashboard", request.url));
         }
-        return NextResponse.redirect(new URL("/", request.url));
+        return NextResponse.redirect(new URL("/user", request.url));
     }
 
     // 2. If user is trying to access PROTECTED admin pages and is NOT an admin,
     // redirect them to the home page.
     if (pathname.startsWith("/admin") && role !== "ADMIN") {
-        return NextResponse.redirect(new URL("/", request.url));
+        return NextResponse.redirect(new URL("/user", request.url));
     }
 
-    // 2. If user is trying to access protected pages and is NOT logged in,
+    // 3. If user is trying to access protected pages and is NOT logged in,
     // redirect them to the login page.
     // Exceptions: public files, api routes, icons
     const isPublicPage = pathname.startsWith("/login") || pathname.includes(".");
@@ -32,9 +32,17 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Special case for root: redirect to login if no token
-    if (pathname === "/" && !token) {
-        return NextResponse.redirect(new URL("/login", request.url));
+    // Special case for root: redirect based on login status and role
+    if (pathname === "/") {
+        if (!token) {
+            return NextResponse.redirect(new URL("/login", request.url));
+        } else {
+            if (role === "ADMIN") {
+                return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+            } else {
+                return NextResponse.redirect(new URL("/user", request.url));
+            }
+        }
     }
 
     return NextResponse.next();
