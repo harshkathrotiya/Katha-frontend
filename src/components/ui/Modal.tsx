@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { Button } from "./Button";
+import { X } from "lucide-react";
 
 interface ModalProps {
     isOpen: boolean;
@@ -13,50 +14,70 @@ interface ModalProps {
 
 export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
     useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") onClose();
+        };
+
         if (isOpen) {
             document.body.style.overflow = "hidden";
+            window.addEventListener("keydown", handleKeyDown);
         } else {
             document.body.style.overflow = "unset";
         }
         return () => {
             document.body.style.overflow = "unset";
+            window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [isOpen]);
+    }, [isOpen, onClose]);
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Smooth Backdrop */}
             <div
-                className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity"
+                className="absolute inset-0 bg-slate-950/40 dark:bg-slate-950/60 backdrop-blur-[2px] transition-opacity duration-300 animate-in fade-in"
                 onClick={onClose}
             />
-            <div className="relative w-full max-w-lg scale-100 transform overflow-hidden rounded-2xl bg-white p-6 shadow-2xl transition-all">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-bold text-slate-900">{title}</h3>
-                    <button
-                        onClick={onClose}
-                        className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                    >
-                        <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
 
-                <div className="text-slate-600">
-                    {children}
-                </div>
+            {/* Minimal Professional Container */}
+            <div className="relative w-full max-w-lg transform transition-all duration-300 animate-in zoom-in-95 scale-95 origin-center">
+                <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-100 dark:border-slate-800/40 shadow-xl shadow-slate-900/5 overflow-hidden">
 
-                {footer && (
-                    <div className="mt-6 flex justify-end gap-3">
-                        {footer}
-                    </div>
-                ) || (
-                        <div className="mt-6 flex justify-end">
-                            <Button variant="outline" onClick={onClose}>Close</Button>
+                    {/* Header */}
+                    <div className="px-6 pt-6 pb-2 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-1 h-4 bg-[#8b1c1c] rounded-full opacity-80" />
+                            <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 tracking-tight">{title}</h3>
                         </div>
-                    )}
+                        <button
+                            onClick={onClose}
+                            className="rounded-lg p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all"
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* Content Body */}
+                    <div className="px-6 py-4">
+                        <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
+                            {children}
+                        </div>
+                    </div>
+
+                    {/* Footer Area */}
+                    <div className="px-6 py-5 flex justify-end gap-3 border-t border-slate-50 dark:border-slate-800/30 bg-slate-50/30 dark:bg-slate-900/10">
+                        {footer || (
+                            <Button
+                                variant="outline"
+                                className="rounded-lg px-6 h-9 text-xs font-bold uppercase tracking-wider"
+                                onClick={onClose}
+                            >
+                                Close
+                            </Button>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -6,13 +6,12 @@ interface User {
     id: string;
     name: string;
     email: string;
-    role: "user" | "admin";
+    role: string;
 }
 
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    login: (credentials: any) => Promise<void>;
     logout: () => void;
 }
 
@@ -23,14 +22,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Simulating auth check
         const checkAuth = async () => {
             try {
-                // Mocking user for demo
-                // setTimeout(() => {
-                //   setUser({ id: "1", name: "Samved", email: "samved@example.com", role: "user" });
-                //   setIsLoading(false);
-                // }, 1000);
+                const token = localStorage.getItem("auth_token");
+                const role = localStorage.getItem("user_role");
+
+                if (token) {
+                    // In a real app, we'd fetch profile here. 
+                    // For now, let's just restore minimal user state from local storage.
+                    setUser({
+                        id: "current",
+                        name: "Admin User",
+                        email: "admin@katha.com",
+                        role: role || "USER"
+                    });
+                }
                 setIsLoading(false);
             } catch (err) {
                 setIsLoading(false);
@@ -39,17 +45,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         checkAuth();
     }, []);
 
-    const login = async (credentials: any) => {
-        // Mocking login
-        setUser({ id: "1", name: "Samved", email: "samved@example.com", role: "user" });
-    };
-
     const logout = () => {
+        // Clear cookies
+        document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+        document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+        // Clear storage
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("user_role");
+
         setUser(null);
+        window.location.href = "/login";
     };
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, login, logout }}>
+        <AuthContext.Provider value={{ user, isLoading, logout }}>
             {children}
         </AuthContext.Provider>
     );

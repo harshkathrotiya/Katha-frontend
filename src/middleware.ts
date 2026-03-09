@@ -4,12 +4,22 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Get token from cookies
+    // Get token and role from cookies
     const token = request.cookies.get("auth_token")?.value;
+    const role = request.cookies.get("user_role")?.value;
 
     // 1. If user is trying to access auth pages (login/signup) and is already logged in,
-    // redirect them to the home page.
+    // redirect them to the home page or admin page.
     if (pathname.startsWith("/login") && token) {
+        if (role === "ADMIN") {
+            return NextResponse.redirect(new URL("/admin/dashboard", request.url));
+        }
+        return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // 2. If user is trying to access PROTECTED admin pages and is NOT an admin,
+    // redirect them to the home page.
+    if (pathname.startsWith("/admin") && role !== "ADMIN") {
         return NextResponse.redirect(new URL("/", request.url));
     }
 

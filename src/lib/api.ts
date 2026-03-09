@@ -16,7 +16,10 @@ export async function fetcher(url: string, options: RequestInit = {}) {
 
     if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
-        throw new Error(errorBody.message || "Something went wrong fetching data");
+        const error = new Error(errorBody.message || "Something went wrong fetching data");
+        (error as any).error = errorBody.error; // attach the error object for details
+        (error as any).data = errorBody.data;
+        throw error;
     }
 
     return response.json();
