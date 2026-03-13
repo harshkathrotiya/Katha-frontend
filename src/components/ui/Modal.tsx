@@ -10,9 +10,10 @@ interface ModalProps {
     title: string;
     children: React.ReactNode;
     footer?: React.ReactNode;
+    maxWidth?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, footer, maxWidth = "max-w-lg" }: ModalProps) {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") onClose();
@@ -41,7 +42,7 @@ export function Modal({ isOpen, onClose, title, children, footer }: ModalProps) 
             />
 
             {/* Minimal Professional Container */}
-            <div className="relative w-full max-w-lg transform transition-all duration-300 animate-in zoom-in-95 scale-95 origin-center">
+            <div className={`relative w-full ${maxWidth} transform transition-all duration-300 animate-in zoom-in-95 scale-95 origin-center`}>
                 <div className="bg-white dark:bg-[#1e293b] rounded-2xl border border-slate-100 dark:border-slate-800/40 shadow-xl shadow-slate-900/5 overflow-hidden">
 
                     {/* Header */}

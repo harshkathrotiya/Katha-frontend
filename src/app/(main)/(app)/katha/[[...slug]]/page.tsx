@@ -43,241 +43,13 @@ import { api } from "@/lib/api";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { KathaCard } from "@/components/features/katha/KathaCard";
+import { RecursiveItem } from "@/components/features/katha/RecursiveItem";
+import { MoveSidebarItem } from "@/components/features/katha/MoveSidebarItem";
+import { MiniAction } from "@/components/features/katha/MiniAction";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
-/**
- * KathaCard Component - Main Gallery Style
- */
-const KathaCard = ({
-  item,
-  onOpen,
-  onEdit,
-  onDelete,
-  onMoveUp,
-  onMoveDown,
-  onMove,
-  onToggleFav
-}: {
-  item: any;
-  onOpen: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onMove: () => void;
-  onToggleFav: () => void;
-}) => {
-  const [isMobileExposed, setIsMobileExposed] = React.useState(false);
-  const title = item.name;
-  const date = new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  const isFav = item.isFav; // Simulated for now
-
-  const actions = [
-    { Icon: Download, label: "Get", onClick: () => { }, bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300" },
-    { Icon: Trash2, label: "Delete", onClick: onDelete, bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300" },
-    { Icon: Share2, label: "Share", onClick: () => { }, bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300" },
-    { Icon: Heart, label: "Favourite", onClick: onToggleFav, bg: isFav ? "bg-maroon text-white" : "bg-amber-100 dark:bg-amber-900/40", text: isFav ? "text-white" : "text-amber-700 dark:text-amber-300" },
-    { Icon: User, label: "Owner", onClick: () => { }, bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-700 dark:text-purple-300" },
-    { Icon: Tag, label: "Tag", onClick: () => { }, bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300" },
-    { Icon: ChevronUp, label: "Move Up", onClick: onMoveUp, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-200" },
-    { Icon: ChevronDown, label: "Move Down", onClick: onMoveDown, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-200" },
-  ];
-
-  return (
-    <div
-      className="group relative bg-white dark:bg-slate-900 rounded-[40px] p-5 md:p-6 border border-slate-100 dark:border-slate-800 shadow-[0_4px_25px_rgba(0,0,0,0.04)] hover:shadow-[0_40px_80px_-20px_rgba(139,29,29,0.25)] transition-all duration-700 w-full lg:max-w-[340px] flex flex-col overflow-visible cursor-pointer"
-      onClick={() => setIsMobileExposed(!isMobileExposed)}
-    >
-      <div className="relative aspect-[3/4.2] rounded-[30px] overflow-hidden bg-white dark:bg-slate-950 border-2 border-slate-50 dark:border-slate-800 transition-all duration-700 mb-6 md:mb-8 group-hover:border-[#8b1D1D]/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-maroon/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -ml-16 -mb-16 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-        <div className={`absolute inset-0 flex flex-col items-center justify-center p-8 text-center transition-all duration-700 group-hover:blur-2xl group-hover:scale-110 group-hover:opacity-0 ${isMobileExposed ? 'blur-2xl scale-110 opacity-0' : ''}`}>
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-[#8b1D1D]/10 flex items-center justify-center mb-6 relative">
-            <div className="absolute inset-0 rounded-full border border-[#8b1D1D]/20 animate-ping opacity-20" />
-            <div className="w-4 h-4 bg-[#8b1D1D] rounded-full shadow-[0_0_20px_rgba(139,29,29,0.4)]" />
-          </div>
-          <div className="text-[#8b1D1D] font-black text-2xl md:text-3xl tracking-tighter font-outfit uppercase leading-[0.9] mb-2">Satsang</div>
-          <div className="text-slate-400 dark:text-slate-500 font-bold text-[9px] md:text-[10px] uppercase tracking-[0.4em]">SGVP Katha</div>
-        </div>
-
-        <div className={`absolute bottom-0 left-0 w-full bg-[#8b1D1D] dark:bg-[#a32b2b] py-5 px-4 text-center z-10 shadow-[0_-15px_30px_rgba(0,0,0,0.2)] transition-transform duration-500 group-hover:translate-y-full ${isMobileExposed ? 'translate-y-full' : ''}`}>
-          <span className="text-white text-xs md:text-sm font-black tracking-[0.15em] uppercase truncate block">{title}</span>
-        </div>
-
-        <div className={`absolute inset-0 z-20 flex flex-col justify-center gap-4 md:gap-6 p-5 md:p-6 transition-all duration-500 bg-white/95 dark:bg-slate-950/95 cursor-default ${isMobileExposed ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}>
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] md:text-[11px] font-black text-[#8b1D1D] uppercase tracking-widest whitespace-nowrap">Actions</span>
-            <div className="h-[2px] w-full bg-[#8b1D1D]/10 rounded-full" />
-          </div>
-
-          <div className="grid grid-cols-4 gap-2 md:gap-3.5">
-            {actions.map((action, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-1 group/item">
-                <button
-                  onClick={(e) => { e.stopPropagation(); action.onClick(); }}
-                  className={`aspect-square w-full ${action.bg} ${action.text} rounded-xl md:rounded-[20px] flex flex-col items-center justify-center transition-all duration-500 hover:scale-125 hover:z-30 hover:shadow-xl active:scale-95 group/btn border border-transparent hover:border-white/10`}
-                >
-                  <action.Icon className="h-4 w-4 md:h-6 md:w-6 stroke-[2.5px] transition-transform group-hover/btn:rotate-12" />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-2">
-            <button
-              onClick={(e) => { e.stopPropagation(); onEdit(); }}
-              className="w-full py-3 bg-[#8b1D1D] text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#6e171b] transition-all active:scale-95 shadow-lg shadow-[#8b1D1D]/20"
-            >
-              <Edit size={14} />
-              <span>Rename Collection</span>
-            </button>
-          </div>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); onOpen(); }}
-            className="w-full py-3 md:py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl md:rounded-[22px] text-[10px] md:text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-2xl hover:-translate-y-1 transition-all active:scale-95"
-          >
-            <Eye className="h-4 w-4 md:h-5 md:w-5 stroke-[2.5px]" />
-            <span>Open Collection</span>
-          </button>
-        </div>
-      </div>
-
-      <div className="px-1 md:px-2">
-        <h3 className="font-outfit font-black text-slate-900 dark:text-white text-xl md:text-2xl tracking-tighter leading-tight group-hover:text-[#8b1D1D] transition-colors truncate">{title}</h3>
-        <div className="flex items-center gap-4 mt-2 md:mt-3">
-          <span className="text-[9px] md:text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">Modified {date}</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/**
- * MiniAction Component
- */
-const MiniAction = ({ Icon, label, onClick, color = "text-[#8b1D1D]" }: { Icon: any; label: string; onClick: (e: any) => void; color?: string }) => (
-  <button
-    onClick={(e) => { e.stopPropagation(); onClick(e); }}
-    className={`group/btn relative p-2 md:p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 hover:border-[#8b1D1D]/30 transition-all ${color} hover:shadow-lg active:scale-95 flex items-center justify-center`}
-  >
-    <Icon size={18} strokeWidth={2.5} className="md:w-[18px] md:h-[18px] w-[16px] h-[16px]" />
-
-    {/* Tooltip */}
-    <div className="hidden md:block absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/btn:opacity-100 transition-all duration-300 pointer-events-none shadow-xl transform translate-y-2 group-hover/btn:translate-y-0 z-[100] whitespace-nowrap">
-      {label}
-      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 dark:bg-white rotate-45" />
-    </div>
-  </button>
-);
-
-/**
- * RecursiveItem Component
- */
-const RecursiveItem = ({
-  index,
-  item,
-  onTag,
-  onFav,
-  onMoveUp,
-  onMoveDown,
-  onDownload,
-  onShare,
-  onUser,
-  onMove,
-  onEdit,
-  onDelete,
-  onClick
-}: {
-  index: number;
-  item: any;
-  onTag: () => void;
-  onFav: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
-  onDownload: () => void;
-  onShare: () => void;
-  onUser: () => void;
-  onMove: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onClick: () => void;
-}) => {
-  const type = item.type;
-  const isFolder = type === 'folder';
-  const title = item.name || item.title;
-  const info = item.info;
-  const isFav = item.isFav;
-
-  return (
-    <div
-      onClick={onClick}
-      className={`w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 md:p-6 flex flex-col lg:flex-row items-start lg:items-center gap-4 md:gap-6 shadow-sm hover:border-[#8b1D1D]/30 transition-all group cursor-pointer relative overflow-hidden`}
-    >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b1D1D]/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
-
-      <div className="flex items-center gap-4 md:gap-6 w-full lg:w-auto">
-        <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-[#8b1D1D]/5 transition-colors">
-          {isFolder ? <FolderOpen className="w-6 h-6 md:w-8 md:h-8 text-amber-500" /> : <BookOpen className="w-6 h-6 md:w-[30px] md:h-[30px] text-[#8b1D1D] stroke-[2.5]" />}
-        </div>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-0.5">
-            <span className="text-[10px] md:text-xs font-black text-slate-300 dark:text-slate-700">
-              {index < 10 ? `0${index}` : index}
-            </span>
-            <h4 className="text-lg md:text-2xl font-bold text-slate-800 dark:text-white tracking-tight group-hover:text-[#8b1D1D] transition-colors truncate">
-              {title}
-            </h4>
-          </div>
-          <p className="text-[10px] md:text-sm text-slate-400 font-medium italic truncate">{info}</p>
-        </div>
-
-        <div className="lg:hidden">
-          <div className={`p-2 rounded-full bg-slate-50 dark:bg-slate-800 text-slate-400`}>
-            <ChevronRight size={18} />
-          </div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-3 w-full lg:flex-1">
-        <div className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm rounded-[22px] border border-slate-100 dark:border-slate-700/50 shadow-sm relative w-full sm:w-auto">
-          <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={Tag} label="Tag" onClick={onTag} color="text-indigo-500 hover:text-indigo-600" />
-            <MiniAction Icon={Heart} label="Favourite" onClick={onFav} color={isFav ? "text-amber-500" : "text-slate-400 hover:text-amber-500"} />
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
-          <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={ChevronUp} label="Move Up" onClick={onMoveUp} color="text-slate-500 hover:text-slate-900" />
-            <MiniAction Icon={ChevronDown} label="Move Down" onClick={onMoveDown} color="text-slate-500 hover:text-slate-900" />
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
-          <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={Download} label="Download" onClick={onDownload} color="text-blue-500 hover:text-blue-600" />
-            <MiniAction Icon={Share2} label="Share" onClick={onShare} color="text-emerald-500 hover:text-emerald-600" />
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
-          <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={User} label="User" onClick={onUser} color="text-purple-500 hover:text-purple-600" />
-            <MiniAction Icon={Move} label="Move" onClick={onMove} color="text-slate-500 hover:text-slate-900" />
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
-          <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={Edit} label="Edit" onClick={onEdit} color="text-slate-500 hover:text-slate-900" />
-            <MiniAction Icon={Trash2} label="Delete" onClick={onDelete} color="text-red-500 hover:text-red-600" />
-          </div>
-        </div>
-
-        <button className={`w-full sm:w-auto px-6 md:px-8 py-3.5 md:py-4 bg-[#8b1D1D] text-white rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest hover:opacity-95 shadow-lg shadow-black/5 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 shrink-0`}>
-          {isFolder ? <ChevronRight size={18} /> : <Eye size={18} />}
-          <span>{isFolder ? 'OPEN' : 'EDIT'}</span>
-        </button>
-      </div>
-    </div>
-  );
-};
 
 export default function KathaCollectionPage() {
   const router = useRouter();
@@ -301,7 +73,12 @@ export default function KathaCollectionPage() {
   const [modalMoveContext, setModalMoveContext] = useState<any>(null); // Current folder in move modal
   const [modalMoveFolders, setModalMoveFolders] = useState<any[]>([]); // Current subfolders in move modal
   const [modalMoveBreadcrumbs, setModalMoveBreadcrumbs] = useState<any[]>([]); // Current path in move modal
+  const [allKathaFolders, setAllKathaFolders] = useState<any[]>([]); // Flat list of all folders for local explorer
   const [isMoveLoading, setIsMoveLoading] = useState(false);
+  const [isCreatingInMove, setIsCreatingInMove] = useState(false);
+  const [newMoveFolderName, setNewMoveFolderName] = useState("");
+  const [moveFolderTree, setMoveFolderTree] = useState<any[]>([]);
+  const [expandedFolderIds, setExpandedFolderIds] = useState<Set<string>>(new Set());
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
@@ -476,20 +253,28 @@ export default function KathaCollectionPage() {
     }
   };
 
-  const fetchModalFolders = async (parentId: string | null) => {
-    setIsMoveLoading(true);
-    try {
-      const res = await api.get(`/folders?section=KATHA${parentId ? `&parentFolderId=${parentId}` : '&parentFolderId=null'}`);
-      let list = res.data || [];
-      if (activeItem?.type === 'folder') {
-        list = list.filter((f: any) => f.id !== activeItem.id);
+  const buildTree = (folders: any[]) => {
+    const map: any = {};
+    const roots: any[] = [];
+    folders.forEach(f => { map[f.id] = { ...f, children: [] }; });
+    folders.forEach(f => {
+      if (f.parentFolderId) {
+        if (map[f.parentFolderId]) map[f.parentFolderId].children.push(map[f.id]);
+        else roots.push(map[f.id]);
+      } else {
+        roots.push(map[f.id]);
       }
-      setModalMoveFolders(list);
-    } catch (err) {
-      showToast("Failed to fetch folders", "error");
-    } finally {
-      setIsMoveLoading(false);
-    }
+    });
+    return roots;
+  };
+
+  const updateModalFolderList = (parentId: string | null, folders: any[]) => {
+    const normalizedParentId = parentId || null;
+    const list = folders.filter((f: any) => {
+      const fParentId = f.parentFolderId || null;
+      return fParentId === normalizedParentId;
+    }).filter((f: any) => f.id !== activeItem?.id);
+    setModalMoveFolders(list);
   };
 
   const handleOpenMoveModal = async (item: any) => {
@@ -497,23 +282,88 @@ export default function KathaCollectionPage() {
     setIsMoveModalOpen(true);
     setModalMoveContext(null);
     setModalMoveBreadcrumbs([]);
-    await fetchModalFolders(null);
+    setIsMoveLoading(true);
+    setIsCreatingInMove(false);
+    setNewMoveFolderName("");
+    try {
+      // Fetch ALL folders (flattened) to allow universal cross-collection movement in the tree
+      const res = await api.get('/folders?section=KATHA&flat=true');
+      const all = res.data || [];
+      setAllKathaFolders(all);
+      const tree = buildTree(all);
+      setMoveFolderTree(tree);
+      updateModalFolderList(null, all);
+    } catch (err) {
+      showToast("Failed to fetch folders", "error");
+    } finally {
+      setIsMoveLoading(false);
+    }
   };
 
-  const handleModalNavigate = async (folder: any) => {
-      setModalMoveContext(folder);
-      setModalMoveBreadcrumbs(prev => [...prev, folder]);
-      await fetchModalFolders(folder.id);
+  const toggleFolderExpansion = (id: string) => {
+    setExpandedFolderIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
-  const handleModalGoBack = async () => {
-      const newCrumbs = [...modalMoveBreadcrumbs];
-      newCrumbs.pop();
-      const parentFolder = newCrumbs.length > 0 ? newCrumbs[newCrumbs.length - 1] : null;
-      
+  const handleModalNavigate = (folder: any) => {
+    setModalMoveContext(folder);
+
+    // Rebuild breadcrumbs
+    const path = [];
+    let curr = folder;
+    while (curr) {
+      path.unshift(curr);
+      curr = allKathaFolders.find(f => f.id === curr.parentFolderId);
+    }
+    setModalMoveBreadcrumbs(path);
+    updateModalFolderList(folder.id, allKathaFolders);
+    setIsCreatingInMove(false);
+
+    // Auto-expand in sidebar if navigate via panel
+    setExpandedFolderIds(prev => new Set(prev).add(folder.id));
+  };
+
+  const handleBreadcrumbNavigate = (idx: number) => {
+    if (idx === -1) {
+      setModalMoveBreadcrumbs([]);
+      setModalMoveContext(null);
+      updateModalFolderList(null, allKathaFolders);
+    } else {
+      const newCrumbs = modalMoveBreadcrumbs.slice(0, idx + 1);
+      const target = newCrumbs[idx];
       setModalMoveBreadcrumbs(newCrumbs);
-      setModalMoveContext(parentFolder);
-      await fetchModalFolders(parentFolder ? parentFolder.id : null);
+      setModalMoveContext(target);
+      updateModalFolderList(target.id, allKathaFolders);
+    }
+    setIsCreatingInMove(false);
+  };
+
+  const handleCreateInMove = async () => {
+    if (!newMoveFolderName.trim()) return;
+    try {
+      const res = await api.post('/folders', {
+        name: newMoveFolderName,
+        parentFolderId: modalMoveContext?.id || null,
+        section: 'KATHA'
+      });
+      const newFolder = res.data?.data || res.data;
+      if (newFolder) {
+        const updatedAll = [...allKathaFolders, newFolder];
+        setAllKathaFolders(updatedAll);
+        const tree = buildTree(updatedAll);
+        setMoveFolderTree(tree);
+        updateModalFolderList(modalMoveContext?.id || null, updatedAll);
+        setIsCreatingInMove(false);
+        setNewMoveFolderName("");
+        showToast("Folder created successfully", "success");
+      }
+    } catch (err) {
+      showToast("Failed to create folder", "error");
+    }
   };
 
   const handleMoveTo = async (targetFolderId: string | null) => {
@@ -749,7 +599,7 @@ export default function KathaCollectionPage() {
           <div className="px-5 md:px-12 py-6 md:py-8 flex items-center justify-between border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl z-40 w-full">
             <div className="flex items-center gap-3 md:gap-4">
               <button
-                onClick={() => router.push("/dashboard")}
+                onClick={() => router.push("/user")}
                 className="p-2 md:px-4 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl hover:text-[#8b1D1D] transition-all text-sm font-black shadow-sm shrink-0 flex items-center gap-2"
               >
                 <LayoutDashboard size={18} />
@@ -799,79 +649,146 @@ export default function KathaCollectionPage() {
       )}
 
       {/* Move Modal */}
-      <Modal isOpen={isMoveModalOpen} onClose={() => setIsMoveModalOpen(false)} title={`Move ${activeItem?.name || activeItem?.title || 'Item'}`}
-        footer={<div className="flex gap-2 w-full">
-          <Button variant="outline" onClick={() => setIsMoveModalOpen(false)} className="flex-1 rounded-xl">Cancel</Button>
-          <Button 
-            onClick={() => handleMoveTo(modalMoveContext?.id || null)} 
-            className="flex-1 bg-[#8b1D1D] hover:bg-[#6e171b] text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#8b1D1D]/20"
-          >
-            Move Here
-          </Button>
+      <Modal
+        isOpen={isMoveModalOpen}
+        onClose={() => setIsMoveModalOpen(false)}
+        title={`Move ${activeItem?.name || activeItem?.title || 'Item'}`}
+        maxWidth="max-w-2xl"
+        footer={<div className="flex items-center justify-between w-full pt-1">
+          <div className="flex items-center gap-2 text-[9px] font-bold uppercase text-slate-400">
+            <span className="opacity-50">To:</span>
+            <span className="text-[#8b1D1D] bg-maroon/5 px-2 py-0.5 rounded border border-maroon/10">{modalMoveContext?.name || 'Root'}</span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setIsMoveModalOpen(false)} className="rounded-xl h-9 px-4 text-xs">Cancel</Button>
+            <Button
+              onClick={() => handleMoveTo(modalMoveContext?.id || null)}
+              className="bg-[#8b1D1D] hover:bg-[#6e171b] text-white rounded-xl h-9 px-6 font-bold uppercase text-[9px] tracking-widest shadow-lg shadow-[#8b1D1D]/20 transition-all active:scale-95"
+            >
+              Move
+            </Button>
+          </div>
         </div>}
       >
-        <div className="space-y-4 py-2">
-          {/* Modal Breadcrumbs */}
-          <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl overflow-x-auto no-scrollbar border border-slate-100 dark:border-slate-800">
-             <button onClick={() => { setModalMoveBreadcrumbs([]); setModalMoveContext(null); fetchModalFolders(null); }} className="text-[10px] font-black text-slate-400 hover:text-maroon uppercase tracking-widest shrink-0">Root</button>
-             {modalMoveBreadcrumbs.map((crumb, i) => (
-                 <React.Fragment key={crumb.id}>
-                    <ChevronRight size={12} className="text-slate-300 shrink-0" />
-                    <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest shrink-0 max-w-[100px] truncate">{crumb.name}</span>
-                 </React.Fragment>
-             ))}
+        <div className="flex flex-col h-[420px] bg-white dark:bg-slate-950 overflow-hidden">
+          {/* Breadcrumbs Top Bar - Minimal Finder Style */}
+          <div className="flex items-center gap-1 p-2 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 shrink-0">
+            <button
+              onClick={() => handleBreadcrumbNavigate(-1)}
+              className={`text-[10px] font-bold px-2 py-1 rounded transition-all ${!modalMoveContext ? 'bg-white dark:bg-slate-800 shadow-sm text-[#8b1D1D]' : 'text-slate-400 hover:text-slate-600'}`}
+            >
+              Collections
+            </button>
+            {modalMoveBreadcrumbs.map((crumb, i) => (
+              <React.Fragment key={crumb.id}>
+                <ChevronRight size={10} className="text-slate-300 shrink-0" />
+                <button
+                  onClick={() => handleBreadcrumbNavigate(i)}
+                  className={`text-[10px] font-bold px-2 py-1 rounded transition-all truncate max-w-[100px] ${i === modalMoveBreadcrumbs.length - 1 ? 'bg-white dark:bg-slate-800 shadow-sm text-[#8b1D1D]' : 'text-slate-400 hover:text-slate-600'}`}
+                >
+                  {crumb.name}
+                </button>
+              </React.Fragment>
+            ))}
           </div>
 
-          <div className="relative">
-            <Input
-              placeholder="Filter subfolders..."
-              value={moveSearch}
-              onChange={(e) => setMoveSearch(e.target.value)}
-              className="rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 pl-10 h-12"
-            />
-            <Settings className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-          </div>
+          <div className="flex flex-1 overflow-hidden">
+            {/* Sidebar Tree - macOS Style */}
+            <div className="w-[200px] border-r border-slate-100 dark:border-slate-800 flex flex-col bg-slate-50/30 dark:bg-slate-900/10">
+              <div className="p-2.5">
+                <span className="text-[8px] font-bold uppercase text-slate-400 tracking-[0.05em] px-2 text-center block">Library</span>
+              </div>
+              <div className="flex-1 overflow-y-auto px-1 pb-4 custom-scrollbar">
+                {moveFolderTree.map(root => (
+                  <MoveSidebarItem
+                    key={root.id}
+                    folder={root}
+                    activeId={modalMoveContext?.id || null}
+                    expandedIds={expandedFolderIds}
+                    onSelect={handleModalNavigate}
+                    onToggle={toggleFolderExpansion}
+                  />
+                ))}
+              </div>
+            </div>
 
-          {modalMoveContext && (
-             <button 
-                onClick={handleModalGoBack}
-                className="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:text-maroon hover:border-maroon/20 hover:bg-maroon/5 transition-all text-[10px] font-black uppercase tracking-widest"
-             >
-                <ChevronLeft size={16} />
-                <span>Go Back Up</span>
-             </button>
-          )}
+            {/* Folder Contents Panel - Finder List Style */}
+            <div className="flex-1 flex flex-col bg-white dark:bg-slate-950">
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 flex-1">
+                  <div className="relative flex-1 max-w-[180px]">
+                    <Input
+                      placeholder="Search"
+                      value={moveSearch}
+                      onChange={(e) => setMoveSearch(e.target.value)}
+                      className="rounded-md border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 h-7 text-[10px] pl-7"
+                    />
+                    <Settings className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-300" size={12} />
+                  </div>
+                  <button
+                    onClick={() => setIsCreatingInMove(!isCreatingInMove)}
+                    className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-500 transition-all"
+                    title="New Folder"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
 
-          <div className="max-h-[300px] min-h-[150px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-            {isMoveLoading ? (
-                <div className="flex items-center justify-center py-10">
-                    <div className="w-8 h-8 border-3 border-maroon border-t-transparent rounded-full animate-spin" />
-                </div>
-            ) : modalMoveFolders.length === 0 ? (
-                <div className="py-10 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest bg-slate-50 dark:bg-slate-900 rounded-3xl">
-                    No subfolders here
-                </div>
-            ) : (
-                modalMoveFolders
-                .filter(f => f.name.toLowerCase().includes(moveSearch.toLowerCase()))
-                .map(f => (
-                    <div
-                    key={f.id}
-                    onClick={() => handleModalNavigate(f)}
-                    className="p-4 rounded-2xl border-2 border-slate-50 dark:border-slate-800 hover:border-[#8b1D1D]/20 hover:bg-maroon/5 transition-all cursor-pointer flex items-center justify-between group"
-                    >
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white dark:bg-slate-800 shadow-sm rounded-xl flex items-center justify-center text-amber-500 group-hover:bg-[#8b1D1D]/10">
-                        <FolderOpen size={20} />
-                        </div>
-                        <div className="min-w-0">
-                        <span className="font-black text-slate-800 dark:text-white uppercase tracking-tight truncate block">{f.name}</span>
-                        </div>
+              {/* List Header */}
+              <div className="flex items-center px-4 py-1.5 border-b border-slate-50 dark:border-slate-900 text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                <div className="flex-1">Name</div>
+                <div className="w-24">Kind</div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                {isCreatingInMove && (
+                  <div className="p-2 border-b border-slate-50 bg-slate-50/50 dark:bg-slate-900/50 animate-in fade-in slide-in-from-top-1">
+                    <div className="flex gap-2">
+                      <Input
+                        autoFocus
+                        placeholder="Folder Name"
+                        value={newMoveFolderName}
+                        onChange={(e) => setNewMoveFolderName(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCreateInMove()}
+                        className="rounded border-slate-200 dark:border-slate-800 h-7 text-[10px] flex-1"
+                      />
+                      <button onClick={handleCreateInMove} className="px-3 bg-[#8b1D1D] text-white rounded text-[10px] font-bold hover:bg-[#6e171b]">Add</button>
                     </div>
-                    <ChevronRight className="text-slate-200 group-hover:text-[#8b1D1D] transition-colors" size={20} />
-                    </div>
-                ))
-            )}
+                  </div>
+                )}
+
+                {isMoveLoading ? (
+                  <div className="flex items-center justify-center h-20">
+                    <div className="w-5 h-5 border-2 border-maroon border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : modalMoveFolders.length === 0 && !isCreatingInMove ? (
+                  <div className="flex flex-col items-center justify-center h-40 opacity-30">
+                    <FolderOpen size={32} className="text-slate-200 mb-1" />
+                    <span className="text-[9px] font-bold uppercase tracking-tight">Empty Folder</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col">
+                    {modalMoveFolders
+                      .filter(f => f.name.toLowerCase().includes(moveSearch.toLowerCase()))
+                      .map(f => (
+                        <div
+                          key={f.id}
+                          onClick={() => handleModalNavigate(f)}
+                          className="flex items-center px-4 py-2 hover:bg-blue-50/50 dark:hover:bg-blue-900/10 cursor-pointer group border-b border-slate-50/50 dark:border-slate-900/30"
+                        >
+                          <div className="flex-1 flex items-center gap-2 min-w-0">
+                            <FolderOpen size={14} className="text-blue-500/80 shrink-0" strokeWidth={2.5} />
+                            <span className="text-[11px] font-medium text-slate-700 dark:text-slate-300 truncate">{f.name}</span>
+                          </div>
+                          <div className="w-24 text-[10px] text-slate-400 font-medium whitespace-nowrap">Folder</div>
+                          <ChevronRight size={12} className="text-slate-200 group-hover:text-slate-400 ml-2" />
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       </Modal>
