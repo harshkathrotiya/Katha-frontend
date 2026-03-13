@@ -298,6 +298,10 @@ export default function KathaCollectionPage() {
   const [activeItem, setActiveItem] = useState<any>(null);
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [modalMoveContext, setModalMoveContext] = useState<any>(null); // Current folder in move modal
+  const [modalMoveFolders, setModalMoveFolders] = useState<any[]>([]); // Current subfolders in move modal
+  const [modalMoveBreadcrumbs, setModalMoveBreadcrumbs] = useState<any[]>([]); // Current path in move modal
+  const [isMoveLoading, setIsMoveLoading] = useState(false);
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
@@ -472,35 +476,54 @@ export default function KathaCollectionPage() {
     }
   };
 
+  const fetchModalFolders = async (parentId: string | null) => {
+    setIsMoveLoading(true);
+    try {
+      const res = await api.get(`/folders?section=KATHA${parentId ? `&parentFolderId=${parentId}` : '&parentFolderId=null'}`);
+      let list = res.data || [];
+      if (activeItem?.type === 'folder') {
+        list = list.filter((f: any) => f.id !== activeItem.id);
+      }
+      setModalMoveFolders(list);
+    } catch (err) {
+      showToast("Failed to fetch folders", "error");
+    } finally {
+      setIsMoveLoading(false);
+    }
+  };
+
   const handleOpenMoveModal = async (item: any) => {
     setActiveItem(item);
     setIsMoveModalOpen(true);
-    try {
-      // Fetch ALL folders in the KATHA section for cross-collection movement
-      const res = await api.get('/folders?section=KATHA');
-      let list = res.data || [];
+    setModalMoveContext(null);
+    setModalMoveBreadcrumbs([]);
+    await fetchModalFolders(null);
+  };
+
+  const handleModalNavigate = async (folder: any) => {
+      setModalMoveContext(folder);
+      setModalMoveBreadcrumbs(prev => [...prev, folder]);
+      await fetchModalFolders(folder.id);
+  };
+
+  const handleModalGoBack = async () => {
+      const newCrumbs = [...modalMoveBreadcrumbs];
+      newCrumbs.pop();
+      const parentFolder = newCrumbs.length > 0 ? newCrumbs[newCrumbs.length - 1] : null;
       
-      // Filter out the item itself if it's a folder
-      if (item.type === 'folder') {
-        list = list.filter((f: any) => f.id !== item.id);
-      }
-      
-      // We don't have human-readable paths yet, so let's use the folder name 
-      // but in a more powerful view soon. 
-      setPotentialFolders(list);
-    } catch (err) {
-      showToast("Failed to fetch folders", "error");
-    }
+      setModalMoveBreadcrumbs(newCrumbs);
+      setModalMoveContext(parentFolder);
+      await fetchModalFolders(parentFolder ? parentFolder.id : null);
   };
 
   const handleMoveTo = async (targetFolderId: string | null) => {
     if (!activeItem) return;
     try {
-      const isFolder = activeItem.type === 'folder' || slug.length === 0;
-      const endpoint = isFolder ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
+      const isFolderItem = activeItem.type === 'folder' || slug.length === 0;
+      const endpoint = isFolderItem ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
 
       await api.put(endpoint, { parentFolderId: targetFolderId });
-      showToast(`Moved successfully`, "success");
+      showToast(`Moved to ${modalMoveContext?.name || 'Root'} successfully`, "success");
       setIsMoveModalOpen(false);
       setTimeout(() => window.location.reload(), 1000);
     } catch (err: any) {
@@ -776,46 +799,79 @@ export default function KathaCollectionPage() {
       )}
 
       {/* Move Modal */}
-      <Modal isOpen={isMoveModalOpen} onClose={() => setIsMoveModalOpen(false)} title={`Move ${activeItem?.name || 'Item'}`}
+      <Modal isOpen={isMoveModalOpen} onClose={() => setIsMoveModalOpen(false)} title={`Move ${activeItem?.name || activeItem?.title || 'Item'}`}
         footer={<div className="flex gap-2 w-full">
           <Button variant="outline" onClick={() => setIsMoveModalOpen(false)} className="flex-1 rounded-xl">Cancel</Button>
-          <Button onClick={() => handleMoveTo(null)} className="flex-1 bg-slate-100 text-slate-900 hover:bg-slate-200 rounded-xl font-black uppercase text-[10px] tracking-widest">Move to Root</Button>
+          <Button 
+            onClick={() => handleMoveTo(modalMoveContext?.id || null)} 
+            className="flex-1 bg-[#8b1D1D] hover:bg-[#6e171b] text-white rounded-xl font-black uppercase text-[10px] tracking-widest shadow-lg shadow-[#8b1D1D]/20"
+          >
+            Move Here
+          </Button>
         </div>}
       >
         <div className="space-y-4 py-2">
+          {/* Modal Breadcrumbs */}
+          <div className="flex items-center gap-2 p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl overflow-x-auto no-scrollbar border border-slate-100 dark:border-slate-800">
+             <button onClick={() => { setModalMoveBreadcrumbs([]); setModalMoveContext(null); fetchModalFolders(null); }} className="text-[10px] font-black text-slate-400 hover:text-maroon uppercase tracking-widest shrink-0">Root</button>
+             {modalMoveBreadcrumbs.map((crumb, i) => (
+                 <React.Fragment key={crumb.id}>
+                    <ChevronRight size={12} className="text-slate-300 shrink-0" />
+                    <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase tracking-widest shrink-0 max-w-[100px] truncate">{crumb.name}</span>
+                 </React.Fragment>
+             ))}
+          </div>
+
           <div className="relative">
             <Input
-              placeholder="Search Folder..."
+              placeholder="Filter subfolders..."
               value={moveSearch}
               onChange={(e) => setMoveSearch(e.target.value)}
-              className="rounded-2xl border-2 border-slate-100 bg-slate-50 pl-10"
+              className="rounded-2xl border-2 border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 pl-10 h-12"
             />
             <Settings className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
           </div>
 
-          <div className="max-h-[300px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
-            {potentialFolders
-              .filter(f => f.name.toLowerCase().includes(moveSearch.toLowerCase()))
-              .map(f => (
-                <div
-                  key={f.id}
-                  onClick={() => handleMoveTo(f.id)}
-                  className="p-4 rounded-2xl border-2 border-slate-50 hover:border-[#8b1D1D]/20 hover:bg-maroon/5 transition-all cursor-pointer flex items-center justify-between group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white shadow-sm rounded-xl flex items-center justify-center text-amber-500 group-hover:bg-[#8b1D1D]/10">
-                      <FolderOpen size={20} />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="font-black text-slate-800 uppercase tracking-tight truncate block">{f.name}</span>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase truncate max-w-[200px]">
-                        ID: {f.id.slice(0, 8)}...
-                      </p>
-                    </div>
-                  </div>
-                  <ChevronRight className="text-slate-200 group-hover:text-[#8b1D1D] transition-colors" size={20} />
+          {modalMoveContext && (
+             <button 
+                onClick={handleModalGoBack}
+                className="w-full flex items-center gap-3 p-3 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 hover:text-maroon hover:border-maroon/20 hover:bg-maroon/5 transition-all text-[10px] font-black uppercase tracking-widest"
+             >
+                <ChevronLeft size={16} />
+                <span>Go Back Up</span>
+             </button>
+          )}
+
+          <div className="max-h-[300px] min-h-[150px] overflow-y-auto pr-2 space-y-2 custom-scrollbar">
+            {isMoveLoading ? (
+                <div className="flex items-center justify-center py-10">
+                    <div className="w-8 h-8 border-3 border-maroon border-t-transparent rounded-full animate-spin" />
                 </div>
-              ))}
+            ) : modalMoveFolders.length === 0 ? (
+                <div className="py-10 text-center text-slate-400 text-[10px] font-bold uppercase tracking-widest bg-slate-50 dark:bg-slate-900 rounded-3xl">
+                    No subfolders here
+                </div>
+            ) : (
+                modalMoveFolders
+                .filter(f => f.name.toLowerCase().includes(moveSearch.toLowerCase()))
+                .map(f => (
+                    <div
+                    key={f.id}
+                    onClick={() => handleModalNavigate(f)}
+                    className="p-4 rounded-2xl border-2 border-slate-50 dark:border-slate-800 hover:border-[#8b1D1D]/20 hover:bg-maroon/5 transition-all cursor-pointer flex items-center justify-between group"
+                    >
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white dark:bg-slate-800 shadow-sm rounded-xl flex items-center justify-center text-amber-500 group-hover:bg-[#8b1D1D]/10">
+                        <FolderOpen size={20} />
+                        </div>
+                        <div className="min-w-0">
+                        <span className="font-black text-slate-800 dark:text-white uppercase tracking-tight truncate block">{f.name}</span>
+                        </div>
+                    </div>
+                    <ChevronRight className="text-slate-200 group-hover:text-[#8b1D1D] transition-colors" size={20} />
+                    </div>
+                ))
+            )}
           </div>
         </div>
       </Modal>
