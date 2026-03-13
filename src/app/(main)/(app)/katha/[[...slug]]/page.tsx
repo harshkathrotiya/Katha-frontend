@@ -36,7 +36,10 @@ import {
   Settings,
   MoreHorizontal,
   LayoutDashboard,
-  Heart
+  Heart,
+  Pin,
+  ArrowUpAZ,
+  ArrowDownZA
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -111,7 +114,28 @@ class EditorHistory {
 }
 
 // 🔹 DSA: Global Cache (Hash Map) for instant navigation
-const contentCache = new Map<string, { contents: any[], folderId: any }>();
+// Persisted in sessions to survive reloads
+const contentCache = {
+  get: (key: string) => {
+    if (typeof window === 'undefined') return null;
+    const cached = sessionStorage.getItem(`katha_cache_${key}`);
+    return cached ? JSON.parse(cached) : null;
+  },
+  set: (key: string, value: any) => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.setItem(`katha_cache_${key}`, JSON.stringify(value));
+  },
+  delete: (key: string) => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.removeItem(`katha_cache_${key}`);
+  },
+  clear: () => {
+    if (typeof window === 'undefined') return;
+    Object.keys(sessionStorage).forEach(k => {
+      if (k.startsWith('katha_cache_')) sessionStorage.removeItem(k);
+    });
+  }
+};
 
 
 export default function KathaCollectionPage() {
@@ -126,6 +150,10 @@ export default function KathaCollectionPage() {
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const trieRef = useRef<Trie>(new Trie());
   const historyRef = useRef<EditorHistory | null>(null);
+
+  // Sorting States
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
   // Modal States
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
@@ -197,20 +225,22 @@ export default function KathaCollectionPage() {
   useEffect(() => {
     const fetchData = async () => {
       const cacheKey = slug.join('/') || 'root';
-      if (contentCache.has(cacheKey)) {
-        const cached = contentCache.get(cacheKey)!;
+      const cached = contentCache.get(cacheKey);
+
+      if (cached) {
         setMixedContents(cached.contents);
         setFilteredContents(cached.contents);
         setCurrentFolderId(cached.folderId);
         setLoading(false);
         // Build trie in background
         const trie = new Trie();
-        cached.contents.forEach(it => trie.insert(it.name || it.title || '', it));
+        cached.contents.forEach((it: any) => trie.insert(it.name || it.title || '', it));
         trieRef.current = trie;
-        return;
+        // Proceed to fetch fresh data in background (Stale-While-Revalidate)
+      } else {
+        setLoading(true);
       }
 
-      setLoading(true);
       try {
         if (slug.length === 0) {
           const res = await api.get('/folders?section=KATHA');
@@ -219,12 +249,18 @@ export default function KathaCollectionPage() {
           setCurrentFolderId(null);
           contentCache.set('root', { contents: data, folderId: null });
         } else {
-          const resolveRes = await api.post('/folders/resolve-path', { path: slug, section: 'KATHA' });
-          const folderId = resolveRes.data.id;
+          // Optimized: Resolve path and get contents in ONE call
+          const resolveRes = await api.post('/folders/resolve-path', {
+            path: slug,
+            section: 'KATHA',
+            includeContents: true
+          });
+
+          const folderData = resolveRes.data;
+          const folderId = folderData.id;
           setCurrentFolderId(folderId);
 
-          const contentsRes = await api.get(`/folders/contents?parentFolderId=${folderId}`);
-          const { folders, files } = contentsRes.data;
+          const { folders, files } = folderData.contents;
 
           const combined = [
             ...(folders || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfoMemo({ ...f, type: 'folder' }) })),
@@ -280,60 +316,116 @@ export default function KathaCollectionPage() {
     }
 
     try {
-      let res;
+      let res: any;
       let processedItem: any;
-      let successMessage = "";
 
       if (modalType === 'create_folder') {
-        res = await api.post('/folders', { name: modalInputValue, parentFolderId: currentFolderId });
-        const newFolder = res.data?.data || res.data;
-        processedItem = { ...newFolder, type: 'folder' };
-        successMessage = "Folder created successfully";
-      } else if (modalType === 'create_collection') {
-        res = await api.post('/folders', { name: modalInputValue, section: 'KATHA' });
-        const newCol = res.data?.data || res.data;
-        processedItem = { ...newCol, type: 'folder' };
-        successMessage = "Collection created successfully";
-      } else if (modalType === 'create_file') {
-        res = await api.post('/files', {
-          name: modalInputValue || 'New File',
-          parentFolderId: currentFolderId,
-          type: 'DOCUMENT',
-          content: ""
-        });
-        const newFile = res.data?.data || res.data;
-        processedItem = { ...newFile, type: 'file' };
-        successMessage = "File created successfully";
-      } else if (modalType === 'edit' && activeItem) {
-        const endpoint = activeItem.type === 'folder' ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
-        await api.put(endpoint, { name: modalInputValue });
+        const tempId = `temp-${Date.now()}`;
+        const tempItem = { id: tempId, name: modalInputValue, type: 'folder', createdAt: new Date().toISOString(), isPinned: false, info: 'Just now' };
+        if (slug.length === 0) setKathaList(prev => [tempItem, ...prev]);
+        else {
+          setMixedContents(prev => [tempItem, ...prev]);
+          setFilteredContents(prev => [tempItem, ...prev]);
+        }
+        setIsInputModalOpen(false);
 
-        const mapper = (it: any) => it.id === activeItem.id ? { ...it, name: modalInputValue, title: modalInputValue } : it;
-        if (slug.length === 0) {
-          setKathaList(prev => prev.map(mapper));
+        try {
+          res = await api.post('/folders', { name: modalInputValue, parentFolderId: currentFolderId });
+          const newFolder = res.data?.data || res.data;
+          processedItem = { ...newFolder, type: 'folder', info: getItemInfoMemo({ ...newFolder, type: 'folder' }) };
+          
+          const finalMapper = (it: any) => it.id === tempId ? processedItem : it;
+          if (slug.length === 0) setKathaList(prev => prev.map(finalMapper));
+          else {
+            setMixedContents(prev => prev.map(finalMapper));
+            setFilteredContents(prev => prev.map(finalMapper));
+          }
+          contentCache.delete(slug.join('/') || 'root');
+          showToast("Folder created successfully", "success");
+        } catch (err) {
+          const revert = (prev: any[]) => prev.filter(i => i.id !== tempId);
+          if (slug.length === 0) setKathaList(revert);
+          else { setMixedContents(revert); setFilteredContents(revert); }
+          throw err;
+        }
+        return;
+      } else if (modalType === 'create_collection') {
+        const tempId = `temp-${Date.now()}`;
+        const tempItem = { id: tempId, name: modalInputValue, type: 'folder', createdAt: new Date().toISOString(), isPinned: false, info: 'Just now' };
+        setKathaList(prev => [tempItem, ...prev]);
+        setIsInputModalOpen(false);
+
+        try {
+          res = await api.post('/folders', { name: modalInputValue, section: 'KATHA' });
+          const newCol = res.data?.data || res.data;
+          processedItem = { ...newCol, type: 'folder', info: getItemInfoMemo({ ...newCol, type: 'folder' }) };
+          
+          const finalMapper = (it: any) => it.id === tempId ? processedItem : it;
+          setKathaList(prev => prev.map(finalMapper));
           contentCache.delete('root');
-        } else {
+          showToast("Collection created successfully", "success");
+        } catch (err) {
+          setKathaList(prev => prev.filter(i => i.id !== tempId));
+          throw err;
+        }
+        return;
+      } else if (modalType === 'create_file') {
+        const tempId = `temp-${Date.now()}`;
+        const tempItem = { id: tempId, name: modalInputValue, type: 'file', createdAt: new Date().toISOString(), isPinned: false, info: 'Just now' };
+        setMixedContents(prev => [tempItem, ...prev]);
+        setFilteredContents(prev => [tempItem, ...prev]);
+        setIsInputModalOpen(false);
+
+        try {
+          res = await api.post('/files', {
+            name: modalInputValue || 'New File',
+            parentFolderId: currentFolderId,
+            type: 'DOCUMENT',
+            content: ""
+          });
+          const newFile = res.data?.data || res.data;
+          processedItem = { ...newFile, type: 'file', info: getItemInfoMemo({ ...newFile, type: 'file' }) };
+          
+          const finalMapper = (it: any) => it.id === tempId ? processedItem : it;
+          setMixedContents(prev => prev.map(finalMapper));
+          setFilteredContents(prev => prev.map(finalMapper));
+          contentCache.delete(slug.join('/') || 'root');
+          showToast("File created successfully", "success");
+        } catch (err) {
+          setMixedContents(prev => prev.filter(i => i.id !== tempId));
+          setFilteredContents(prev => prev.filter(i => i.id !== tempId));
+          throw err;
+        }
+        return;
+      } else if (modalType === 'edit' && activeItem) {
+        const oldName = activeItem.name || activeItem.title;
+        const endpoint = activeItem.type === 'folder' ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
+        
+        // Optimistic Rename
+        const mapper = (it: any) => it.id === activeItem.id ? { ...it, name: modalInputValue, title: modalInputValue } : it;
+        if (slug.length === 0) setKathaList(prev => prev.map(mapper));
+        else {
           setMixedContents(prev => prev.map(mapper));
           setFilteredContents(prev => prev.map(mapper));
-          contentCache.delete(slug.join('/') || 'root');
         }
-        showToast("Renamed successfully", "success");
         setIsInputModalOpen(false);
+
+        try {
+          await api.put(endpoint, { name: modalInputValue });
+          contentCache.delete(slug.join('/') || 'root');
+          if (slug.length === 0) contentCache.delete('root');
+          showToast("Renamed successfully", "success");
+        } catch (err) {
+          const revert = (it: any) => it.id === activeItem.id ? { ...it, name: oldName, title: oldName } : it;
+          if (slug.length === 0) setKathaList(prev => prev.map(revert));
+          else {
+            setMixedContents(prev => prev.map(revert));
+            setFilteredContents(prev => prev.map(revert));
+          }
+          throw err;
+        }
         return;
       }
-
-      // Finalize creation
-      const newItem = { ...processedItem, info: getItemInfo(processedItem) };
-      if (modalType === 'create_collection') {
-        setKathaList(prev => [...prev, newItem]);
-        contentCache.delete('root');
-      } else {
-        setMixedContents(prev => [...prev, newItem]);
-        setFilteredContents(prev => [...prev, newItem]);
-        contentCache.delete(slug.join('/') || 'root');
-      }
-      showToast(successMessage, "success");
-      setIsInputModalOpen(false);
     } catch (err: any) {
       showToast(err.message || 'Operation failed', 'error');
     }
@@ -341,8 +433,10 @@ export default function KathaCollectionPage() {
 
   const handleReorder = async (item: any, direction: 'up' | 'down') => {
     const isGallery = slug.length === 0;
-    const targetList = isGallery ? kathaList : mixedContents;
-    const setList = isGallery ? setKathaList : setMixedContents;
+    if (!isGallery) return; // Disable for files/folders in favor of sorting/pinning
+
+    const targetList = kathaList;
+    const setList = setKathaList;
 
     const idx = targetList.findIndex(i => i.id === item.id);
     if (idx === -1) return;
@@ -538,7 +632,7 @@ export default function KathaCollectionPage() {
         contentCache.delete(slug.join('/') || 'root');
       }
       // Invalidate target cache if we knew it
-      if (targetFolderId) contentCache.delete(targetFolderId); 
+      if (targetFolderId) contentCache.delete(targetFolderId);
 
       showToast(`Moved to ${modalMoveContext?.name || 'Root'} successfully`, "success");
       setIsMoveModalOpen(false);
@@ -577,20 +671,30 @@ export default function KathaCollectionPage() {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+    const deletedId = itemToDelete.id;
+    const originalMixed = [...mixedContents];
+    const originalKatha = [...kathaList];
+
+    // Optimistic Delete
+    if (slug.length === 0) setKathaList(prev => prev.filter(i => i.id !== deletedId));
+    else {
+      setMixedContents(prev => prev.filter(i => i.id !== deletedId));
+      setFilteredContents(prev => prev.filter(i => i.id !== deletedId));
+    }
+    setIsConfirmModalOpen(false);
+
     try {
-      const endpoint = itemToDelete.type === 'folder' || slug.length === 0 ? `/folders/${itemToDelete.id}` : `/files/${itemToDelete.id}`;
+      const endpoint = itemToDelete.type === 'folder' || slug.length === 0 ? `/folders/${deletedId}` : `/files/${deletedId}`;
       await api.delete(endpoint);
-      if (slug.length === 0) {
-        setKathaList(prev => prev.filter(i => i.id !== itemToDelete.id));
-        contentCache.delete('root');
-      } else {
-        setMixedContents(prev => prev.filter(i => i.id !== itemToDelete.id));
-        setFilteredContents(prev => prev.filter(i => i.id !== itemToDelete.id));
-        contentCache.delete(slug.join('/') || 'root');
-      }
+      contentCache.delete(slug.join('/') || 'root');
+      if (slug.length === 0) contentCache.delete('root');
       showToast("Item deleted", "success");
-      setIsConfirmModalOpen(false);
     } catch (err) {
+      if (slug.length === 0) setKathaList(originalKatha);
+      else {
+        setMixedContents(originalMixed);
+        setFilteredContents(originalMixed);
+      }
       showToast("Delete failed", "error");
     }
   };
@@ -605,7 +709,7 @@ export default function KathaCollectionPage() {
       showToast("Changes saved", "success");
       // DSA: DLL push new state
       historyRef.current?.push(editorContent);
-      
+
       const updateMapper = (item: any) => {
         if (item.id === editingFile.id) {
           const newItem = { ...item, ...updated, type: 'file' };
@@ -640,7 +744,44 @@ export default function KathaCollectionPage() {
     }
   };
 
-  // 🔹 DSA: Breadth First Search (BFS) to find any folder in a deep tree
+  const handleTogglePin = async (item: any) => {
+    const newPinnedStatus = !item.isPinned;
+    const mapper = (it: any) => it.id === item.id ? { ...it, isPinned: newPinnedStatus } : it;
+
+    // Optimistic Update
+    setMixedContents(prev => prev.map(mapper));
+    setFilteredContents(prev => prev.map(mapper));
+
+    try {
+      const endpoint = item.type === 'folder' ? `/folders/${item.id}` : `/files/${item.id}`;
+      await api.put(endpoint, { isPinned: newPinnedStatus });
+      contentCache.delete(slug.join('/') || 'root');
+      showToast(newPinnedStatus ? "Pinned to top" : "Removed from top", "success");
+    } catch (err) {
+      // Rollback on error
+      const rollbackMapper = (it: any) => it.id === item.id ? { ...it, isPinned: !newPinnedStatus } : it;
+      setMixedContents(prev => prev.map(rollbackMapper));
+      setFilteredContents(prev => prev.map(rollbackMapper));
+      showToast("Failed to pin item", "error");
+    }
+  };
+
+  const getSortedItems = (items: any[]) => {
+    return [...items].sort((a, b) => {
+      if (a.isPinned && !b.isPinned) return -1;
+      if (!a.isPinned && b.isPinned) return 1;
+      let comparison = 0;
+      if (sortBy === 'name') {
+        comparison = (a.name || a.title || "").localeCompare(b.name || b.title || "");
+      } else if (sortBy === 'date') {
+        comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      } else if (sortBy === 'size') {
+        comparison = Number(b.size || 0) - Number(a.size || 0);
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+  };
+
   const findFolderBFS = (targetName: string, rootNodes: any[]) => {
     const queue = [...rootNodes];
     const results: any[] = [];
@@ -735,35 +876,44 @@ export default function KathaCollectionPage() {
               </div>
               <div className="flex flex-col sm:flex-row gap-3 items-end">
                 <div className="relative w-full sm:w-64 group">
-                  <Input 
-                    placeholder="Fast Search..." 
-                    value={moveSearch} 
+                  <Input
+                    placeholder="Fast Search..."
+                    value={moveSearch}
                     onChange={(e) => handleSearch(e.target.value)}
-                    className="pl-10 h-12 rounded-2xl border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[10px]"
+                    className="pl-10 h-10 rounded-xl border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[9px]"
                   />
-                  <Eye size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />
+                  <Eye size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />
+                </div>
+                <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl items-center gap-1 border border-slate-200 dark:border-slate-800">
+                  <button onClick={() => setSortBy('name')} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Name</button>
+                  <button onClick={() => setSortBy('date')} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'date' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Date</button>
+                  <button onClick={() => setSortBy('size')} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'size' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Size</button>
+                  <div className="w-px h-3 bg-slate-300 dark:bg-slate-700 mx-1" />
+                  <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1.5 text-slate-400 hover:text-maroon transition-colors">
+                    {sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
+                  </button>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
-                    <button
-                      onClick={() => openInputModal('create_folder')}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3.5 md:py-4 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-sm hover:border-[#8b1D1D]/30 transition-all"
-                    >
-                      <Plus size={18} />
-                      <span>New Folder</span>
-                    </button>
-                    <button
-                      onClick={() => openInputModal('create_file')}
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3.5 md:py-4 bg-[#8b1D1D] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-[#8b1D1D]/20 hover:-translate-y-1 transition-all"
-                    >
-                      <FilePlus size={18} />
-                      <span>New File</span>
-                    </button>
+                  <button
+                    onClick={() => openInputModal('create_folder')}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl font-black uppercase tracking-widest text-[9px] shadow-sm hover:border-[#8b1D1D]/30 transition-all"
+                  >
+                    <Plus size={16} />
+                    <span>New Folder</span>
+                  </button>
+                  <button
+                    onClick={() => openInputModal('create_file')}
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3 bg-[#8b1D1D] text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-xl shadow-[#8b1D1D]/20 hover:-translate-y-0.5 transition-all"
+                  >
+                    <FilePlus size={16} />
+                    <span>New File</span>
+                  </button>
                 </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              {filteredContents.length === 0 ? (
+              {getSortedItems(filteredContents).length === 0 ? (
                 <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[40px]">
                   <div className="w-16 h-16 bg-slate-50 dark:bg-slate-950 rounded-3xl flex items-center justify-center text-slate-200 dark:text-slate-800">
                     <FolderOpen size={32} />
@@ -774,16 +924,14 @@ export default function KathaCollectionPage() {
                   </div>
                 </div>
               ) : (
-                // DSA: Simple Virtualization (Slice current view)
-                filteredContents.map((item, idx) => (
+                getSortedItems(filteredContents).map((item, idx) => (
                   <RecursiveItem
                     key={item.id}
                     index={idx + 1}
                     item={item}
                     onTag={() => showToast('Tag feature active!', 'success')}
                     onFav={() => handeToggleFav(item)}
-                    onMoveUp={() => handleReorder(item, 'up')}
-                    onMoveDown={() => handleReorder(item, 'down')}
+                    onPin={() => handleTogglePin(item)}
                     onDownload={() => {
                       if (item.type === 'file' && item.metadata) {
                         try {
@@ -852,7 +1000,7 @@ export default function KathaCollectionPage() {
               <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">Your Collections</h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 md:gap-x-12 gap-y-12 md:gap-y-20">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
               {kathaList.map((item, idx) => (
                 <KathaCard
                   key={item.id}
@@ -1068,14 +1216,14 @@ export default function KathaCollectionPage() {
             </div>
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
               <div className="flex items-center gap-1 border-r border-slate-200 dark:border-slate-800 pr-3 mr-1">
-                <button 
+                <button
                   onClick={() => handleUndoRedo('undo')}
                   className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all flex items-center gap-1 group"
                 >
                   <ChevronLeft size={18} className="group-active:-translate-x-1 transition-transform" />
                   <span className="text-[8px] font-black uppercase tracking-widest hidden sm:inline">Undo</span>
                 </button>
-                <button 
+                <button
                   onClick={() => handleUndoRedo('redo')}
                   className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all flex items-center gap-1 group"
                 >

@@ -5,8 +5,7 @@ import {
   ChevronRight, 
   Tag, 
   Heart, 
-  ChevronUp, 
-  ChevronDown, 
+  Pin,
   Download, 
   Share2, 
   User, 
@@ -25,8 +24,7 @@ export const RecursiveItem = ({
   item,
   onTag,
   onFav,
-  onMoveUp,
-  onMoveDown,
+  onPin,
   onDownload,
   onShare,
   onUser,
@@ -39,8 +37,7 @@ export const RecursiveItem = ({
   item: any;
   onTag: () => void;
   onFav: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
+  onPin: () => void;
   onDownload: () => void;
   onShare: () => void;
   onUser: () => void;
@@ -54,26 +51,28 @@ export const RecursiveItem = ({
   const title = item.name || item.title;
   const info = item.info;
   const isFav = item.isFav;
+  const isPinned = item.isPinned;
 
   return (
     <div
       onClick={onClick}
       style={{ animationDelay: `${index * 50}ms` }}
-      className={`w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 md:p-6 flex flex-col lg:flex-row items-start lg:items-center gap-4 md:gap-6 shadow-sm hover:border-[#8b1D1D]/30 transition-all group cursor-pointer relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both`}
+      className={`w-full bg-white dark:bg-slate-900 border ${isPinned ? 'border-[#8b1D1D]/50 bg-[#8b1D1D]/[0.02]' : 'border-slate-100 dark:border-slate-800'} rounded-2xl p-3 md:p-4 flex flex-col lg:flex-row items-start lg:items-center gap-3 md:gap-5 shadow-sm hover:border-[#8b1D1D]/30 transition-all group cursor-pointer relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both`}
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b1D1D]/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-      <div className="flex items-center gap-4 md:gap-6 w-full lg:w-auto">
-        <div className="w-12 h-12 md:w-16 md:h-16 bg-slate-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center shrink-0 group-hover:bg-[#8b1D1D]/5 transition-colors">
-          {isFolder ? <FolderOpen className="w-6 h-6 md:w-8 md:h-8 text-amber-500" /> : <BookOpen className="w-6 h-6 md:w-[30px] md:h-[30px] text-[#8b1D1D] stroke-[2.5]" />}
+      <div className="flex items-center gap-3 md:gap-5 w-full lg:w-auto">
+        <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#8b1D1D]/5 transition-colors">
+          {isFolder ? <FolderOpen className="w-5 h-5 md:w-6 md:h-6 text-amber-500" /> : <BookOpen className="w-5 h-5 md:w-6 md:h-6 text-[#8b1D1D] stroke-[2.5]" />}
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
+            {isPinned && <Pin size={12} className="text-[#8b1D1D] fill-[#8b1D1D]" />}
             <span className="text-[10px] md:text-xs font-black text-slate-300 dark:text-slate-700">
               {index < 10 ? `0${index}` : index}
             </span>
-            <h4 className="text-lg md:text-2xl font-bold text-slate-800 dark:text-white tracking-tight group-hover:text-[#8b1D1D] transition-colors truncate">
+            <h4 className="text-base md:text-xl font-bold text-slate-800 dark:text-white tracking-tight group-hover:text-[#8b1D1D] transition-colors truncate">
               {title}
             </h4>
           </div>
@@ -87,16 +86,12 @@ export const RecursiveItem = ({
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-3 w-full lg:flex-1">
-        <div className="flex flex-wrap items-center justify-center gap-1.5 p-1.5 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm rounded-[22px] border border-slate-100 dark:border-slate-700/50 shadow-sm relative w-full sm:w-auto">
+      <div className="flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-2 w-full lg:flex-1">
+        <div className="flex flex-wrap items-center justify-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative w-full sm:w-auto">
           <div className="flex items-center gap-1 px-0.5 md:px-1">
             <MiniAction Icon={Tag} label="Tag" onClick={onTag} color="text-indigo-500 hover:text-indigo-600" />
             <MiniAction Icon={Heart} label="Favourite" onClick={onFav} color={isFav ? "text-amber-500" : "text-slate-400 hover:text-amber-500"} />
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
-          <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={ChevronUp} label="Move Up" onClick={onMoveUp} color="text-slate-500 hover:text-slate-900" />
-            <MiniAction Icon={ChevronDown} label="Move Down" onClick={onMoveDown} color="text-slate-500 hover:text-slate-900" />
+            <MiniAction Icon={Pin} label={isPinned ? "Unpin" : "Pin"} onClick={onPin} color={isPinned ? "text-[#8b1D1D] fill-[#8b1D1D]/10" : "text-slate-400 hover:text-[#8b1D1D]"} />
           </div>
           <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
           <div className="flex items-center gap-1 px-0.5 md:px-1">
@@ -113,12 +108,15 @@ export const RecursiveItem = ({
             <MiniAction Icon={Edit} label="Edit" onClick={onEdit} color="text-slate-500 hover:text-slate-900" />
             <MiniAction Icon={Trash2} label="Delete" onClick={onDelete} color="text-red-500 hover:text-red-600" />
           </div>
+          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
+          <button 
+            onClick={(e) => { e.stopPropagation(); onClick(); }}
+            className={`flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-[#8b1D1D] transition-all whitespace-nowrap`}
+          >
+            {isFolder ? <ChevronRight size={16} /> : <Eye size={16} />}
+            <span>{isFolder ? 'OPEN' : 'EDIT'}</span>
+          </button>
         </div>
-
-        <button className={`w-full sm:w-auto px-6 md:px-8 py-3.5 md:py-4 bg-[#8b1D1D] text-white rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-widest hover:opacity-95 shadow-lg shadow-black/5 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 shrink-0`}>
-          {isFolder ? <ChevronRight size={18} /> : <Eye size={18} />}
-          <span>{isFolder ? 'OPEN' : 'EDIT'}</span>
-        </button>
       </div>
     </div>
   );

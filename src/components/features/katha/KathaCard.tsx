@@ -51,10 +51,10 @@ export const KathaCard = ({
 
   return (
     <div
-      className="group relative bg-white dark:bg-slate-900 rounded-[40px] p-5 md:p-6 border border-slate-100 dark:border-slate-800 shadow-[0_4px_25px_rgba(0,0,0,0.04)] hover:shadow-[0_40px_80px_-20px_rgba(139,29,29,0.25)] transition-all duration-700 w-full lg:max-w-[340px] flex flex-col overflow-visible cursor-pointer animate-in fade-in zoom-in-95 duration-700 slide-in-from-bottom-4"
+      className="group relative bg-white dark:bg-slate-900 rounded-[32px] p-4 md:p-5 border border-slate-100 dark:border-slate-800 shadow-[0_4px_25px_rgba(0,0,0,0.04)] hover:shadow-[0_40px_80px_-20px_rgba(139,29,29,0.25)] transition-all duration-700 w-full flex flex-col overflow-visible cursor-pointer animate-in fade-in zoom-in-95 duration-700 slide-in-from-bottom-4"
       onClick={() => setIsMobileExposed(!isMobileExposed)}
     >
-      <div className="relative aspect-[3/4.2] rounded-[30px] overflow-hidden bg-white dark:bg-slate-950 border-2 border-slate-50 dark:border-slate-800 transition-all duration-700 mb-6 md:mb-8 group-hover:border-[#8b1D1D]/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+      <div className="relative aspect-[3/4.2] rounded-[24px] overflow-hidden bg-white dark:bg-slate-950 border-2 border-slate-50 dark:border-slate-800 transition-all duration-700 mb-4 md:mb-6 group-hover:border-[#8b1D1D]/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
         <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b1D1D]/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 group-hover:opacity-100 transition-opacity" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -ml-16 -mb-16 opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -67,8 +67,8 @@ export const KathaCard = ({
           <div className="text-slate-400 dark:text-slate-500 font-bold text-[9px] md:text-[10px] uppercase tracking-[0.4em]">SGVP Katha</div>
         </div>
 
-        <div className={`absolute bottom-0 left-0 w-full bg-[#8b1D1D] dark:bg-[#a32b2b] py-5 px-4 text-center z-10 shadow-[0_-15px_30px_rgba(0,0,0,0.2)] transition-transform duration-500 group-hover:translate-y-full ${isMobileExposed ? 'translate-y-full' : ''}`}>
-          <span className="text-white text-xs md:text-sm font-black tracking-[0.15em] uppercase truncate block">{title}</span>
+        <div className={`absolute bottom-0 left-0 w-full bg-[#8b1D1D] dark:bg-[#a32b2b] py-3.5 px-3 text-center z-10 shadow-[0_-15px_30px_rgba(0,0,0,0.2)] transition-transform duration-500 group-hover:translate-y-full ${isMobileExposed ? 'translate-y-full' : ''}`}>
+          <span className="text-white text-[10px] md:text-xs font-black tracking-[0.1em] uppercase truncate block">{title}</span>
         </div>
 
         <div className={`absolute inset-0 z-20 flex flex-col justify-center gap-4 md:gap-6 p-5 md:p-6 transition-all duration-500 bg-white/95 dark:bg-slate-950/95 cursor-default ${isMobileExposed ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}>
@@ -110,12 +110,12 @@ export const KathaCard = ({
         </div>
       </div>
 
-      <div className="px-1 md:px-2">
-        <h3 className="font-outfit font-black text-slate-900 dark:text-white text-xl md:text-2xl tracking-tighter leading-tight group-hover:text-[#8b1D1D] transition-colors truncate">{title}</h3>
-        <div className="flex items-center gap-4 mt-2 md:mt-3">
-          <span className="text-[9px] md:text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">{item.info}</span>
-          <div className="w-1 h-1 rounded-full bg-slate-300" />
-          <span className="text-[9px] md:text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">{date}</span>
+      <div className="px-0.5">
+        <h3 className="font-outfit font-black text-slate-900 dark:text-white text-lg md:text-xl tracking-tighter leading-tight group-hover:text-[#8b1D1D] transition-colors truncate">{title}</h3>
+        <div className="flex items-center gap-2 mt-1 md:mt-2">
+          <span className="text-[8px] md:text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">{item.info}</span>
+          <div className="w-0.5 h-0.5 rounded-full bg-slate-300" />
+          <span className="text-[8px] md:text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">{date}</span>
         </div>
       </div>
     </div>
