@@ -50,6 +50,69 @@ import { MiniAction } from "@/components/features/katha/MiniAction";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 
+// 🔹 DSA: Trie (Prefix Tree) for lightning fast search
+class TrieNode {
+  children: { [key: string]: TrieNode } = {};
+  items: any[] = [];
+}
+class Trie {
+  root = new TrieNode();
+  insert(name: string, item: any) {
+    let node = this.root;
+    const cleanName = name.toLowerCase();
+    for (const char of cleanName) {
+      if (!node.children[char]) node.children[char] = new TrieNode();
+      node = node.children[char];
+      node.items.push(item);
+    }
+  }
+  search(prefix: string): any[] {
+    let node = this.root;
+    const cleanPrefix = prefix.toLowerCase();
+    for (const char of cleanPrefix) {
+      if (!node.children[char]) return [];
+      node = node.children[char];
+    }
+    return node.items;
+  }
+}
+
+// 🔹 DSA: Doubly Linked List for Undo/Redo History
+class HistoryNode {
+  content: string;
+  next: HistoryNode | null = null;
+  prev: HistoryNode | null = null;
+  constructor(content: string) { this.content = content; }
+}
+class EditorHistory {
+  current: HistoryNode;
+  constructor(initial: string) { this.current = new HistoryNode(initial); }
+  push(content: string) {
+    if (content === this.current.content) return;
+    const newNode = new HistoryNode(content);
+    newNode.prev = this.current;
+    this.current.next = newNode;
+    this.current = newNode;
+  }
+  undo(): string | null {
+    if (this.current.prev) {
+      this.current = this.current.prev;
+      return this.current.content;
+    }
+    return null;
+  }
+  redo(): string | null {
+    if (this.current.next) {
+      this.current = this.current.next;
+      return this.current.content;
+    }
+    return null;
+  }
+}
+
+// 🔹 DSA: Global Cache (Hash Map) for instant navigation
+const contentCache = new Map<string, { contents: any[], folderId: any }>();
+
 
 export default function KathaCollectionPage() {
   const router = useRouter();
@@ -59,7 +122,10 @@ export default function KathaCollectionPage() {
   const [loading, setLoading] = useState(true);
   const [kathaList, setKathaList] = useState<any[]>([]);
   const [mixedContents, setMixedContents] = useState<any[]>([]);
+  const [filteredContents, setFilteredContents] = useState<any[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
+  const trieRef = useRef<Trie>(new Trie());
+  const historyRef = useRef<EditorHistory | null>(null);
 
   // Modal States
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
@@ -100,14 +166,58 @@ export default function KathaCollectionPage() {
     setTimeout(() => setToast({ message: '', type: null }), 3000);
   };
 
+  // 🔹 DSA: Dynamic Programming / Memoization for stats
+  const statsCache = useRef(new Map<string, string>());
+  const getItemInfoMemo = (item: any) => {
+    const key = `${item.id}-${item.updatedAt || '0'}`;
+    if (statsCache.current.has(key)) return statsCache.current.get(key);
+    const info = getItemInfo(item);
+    statsCache.current.set(key, info);
+    return info;
+  };
+
+  const formatSize = (bytes: any) => {
+    const b = Number(bytes);
+    if (isNaN(b) || b <= 0) return '0 KB';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(b) / Math.log(k));
+    return parseFloat((b / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getItemInfo = (item: any) => {
+    if (item.type === 'folder') {
+      const count = (item._count?.children || 0) + (item._count?.files || 0);
+      return `${count} Item${count !== 1 ? 's' : ''}`;
+    }
+    const size = Number(item.size);
+    return size > 0 ? `${formatSize(size)} - Source` : 'New Document';
+  };
+
   useEffect(() => {
     const fetchData = async () => {
+      const cacheKey = slug.join('/') || 'root';
+      if (contentCache.has(cacheKey)) {
+        const cached = contentCache.get(cacheKey)!;
+        setMixedContents(cached.contents);
+        setFilteredContents(cached.contents);
+        setCurrentFolderId(cached.folderId);
+        setLoading(false);
+        // Build trie in background
+        const trie = new Trie();
+        cached.contents.forEach(it => trie.insert(it.name || it.title || '', it));
+        trieRef.current = trie;
+        return;
+      }
+
       setLoading(true);
       try {
         if (slug.length === 0) {
           const res = await api.get('/folders?section=KATHA');
-          setKathaList(res.data || []);
+          const data = (res.data || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfo({ ...f, type: 'folder' }) }));
+          setKathaList(data);
           setCurrentFolderId(null);
+          contentCache.set('root', { contents: data, folderId: null });
         } else {
           const resolveRes = await api.post('/folders/resolve-path', { path: slug, section: 'KATHA' });
           const folderId = resolveRes.data.id;
@@ -117,11 +227,18 @@ export default function KathaCollectionPage() {
           const { folders, files } = contentsRes.data;
 
           const combined = [
-            ...(folders || []).map((f: any) => ({ ...f, type: 'folder', info: 'Folder' })),
-            ...(files || []).map((f: any) => ({ ...f, type: 'file', info: `${(f.size / 1024).toFixed(1)} KB - File` }))
+            ...(folders || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfoMemo({ ...f, type: 'folder' }) })),
+            ...(files || []).map((f: any) => ({ ...f, type: 'file', info: getItemInfoMemo({ ...f, type: 'file' }) }))
           ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
           setMixedContents(combined);
+          setFilteredContents(combined);
+          contentCache.set(cacheKey, { contents: combined, folderId });
+
+          // DSA: Initialize Trie for search
+          const trie = new Trie();
+          combined.forEach(it => trie.insert(it.name || it.title || '', it));
+          trieRef.current = trie;
         }
       } catch (err) {
         console.error('Failed to fetch:', err);
@@ -163,27 +280,60 @@ export default function KathaCollectionPage() {
     }
 
     try {
+      let res;
+      let processedItem: any;
+      let successMessage = "";
+
       if (modalType === 'create_folder') {
-        await api.post('/folders', { name: modalInputValue, parentFolderId: currentFolderId });
-        showToast("Folder created successfully", "success");
+        res = await api.post('/folders', { name: modalInputValue, parentFolderId: currentFolderId });
+        const newFolder = res.data?.data || res.data;
+        processedItem = { ...newFolder, type: 'folder' };
+        successMessage = "Folder created successfully";
       } else if (modalType === 'create_collection') {
-        await api.post('/folders', { name: modalInputValue, section: 'KATHA' });
-        showToast("Collection created successfully", "success");
+        res = await api.post('/folders', { name: modalInputValue, section: 'KATHA' });
+        const newCol = res.data?.data || res.data;
+        processedItem = { ...newCol, type: 'folder' };
+        successMessage = "Collection created successfully";
       } else if (modalType === 'create_file') {
-        await api.post('/files', {
+        res = await api.post('/files', {
           name: modalInputValue || 'New File',
           parentFolderId: currentFolderId,
           type: 'DOCUMENT',
           content: ""
         });
-        showToast("File created successfully", "success");
+        const newFile = res.data?.data || res.data;
+        processedItem = { ...newFile, type: 'file' };
+        successMessage = "File created successfully";
       } else if (modalType === 'edit' && activeItem) {
         const endpoint = activeItem.type === 'folder' ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
         await api.put(endpoint, { name: modalInputValue });
+
+        const mapper = (it: any) => it.id === activeItem.id ? { ...it, name: modalInputValue, title: modalInputValue } : it;
+        if (slug.length === 0) {
+          setKathaList(prev => prev.map(mapper));
+          contentCache.delete('root');
+        } else {
+          setMixedContents(prev => prev.map(mapper));
+          setFilteredContents(prev => prev.map(mapper));
+          contentCache.delete(slug.join('/') || 'root');
+        }
         showToast("Renamed successfully", "success");
+        setIsInputModalOpen(false);
+        return;
       }
+
+      // Finalize creation
+      const newItem = { ...processedItem, info: getItemInfo(processedItem) };
+      if (modalType === 'create_collection') {
+        setKathaList(prev => [...prev, newItem]);
+        contentCache.delete('root');
+      } else {
+        setMixedContents(prev => [...prev, newItem]);
+        setFilteredContents(prev => [...prev, newItem]);
+        contentCache.delete(slug.join('/') || 'root');
+      }
+      showToast(successMessage, "success");
       setIsInputModalOpen(false);
-      setTimeout(() => window.location.reload(), 1000);
     } catch (err: any) {
       showToast(err.message || 'Operation failed', 'error');
     }
@@ -211,6 +361,8 @@ export default function KathaCollectionPage() {
     });
 
     setList(newItems);
+    if (!isGallery) setFilteredContents(newItems);
+    contentCache.delete(slug.join('/') || 'root');
 
     try {
       const it1 = newItems[idx];
@@ -238,7 +390,9 @@ export default function KathaCollectionPage() {
       const newFavStatus = !item.isFav;
 
       // Optimistic update
-      setList(targetList.map(it => it.id === item.id ? { ...it, isFav: newFavStatus } : it));
+      const mapper = (it: any) => it.id === item.id ? { ...it, isFav: newFavStatus } : it;
+      setList(targetList.map(mapper));
+      if (!isGallery) setFilteredContents(prev => prev.map(mapper));
 
       if (item.type === 'file') {
         const meta = JSON.parse(item.metadata || '{}');
@@ -373,9 +527,21 @@ export default function KathaCollectionPage() {
       const endpoint = isFolderItem ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
 
       await api.put(endpoint, { parentFolderId: targetFolderId });
+
+      // Optimistic state update: remove from current view
+      if (slug.length === 0) {
+        setKathaList(prev => prev.filter(i => i.id !== activeItem.id));
+        contentCache.delete('root');
+      } else {
+        setMixedContents(prev => prev.filter(i => i.id !== activeItem.id));
+        setFilteredContents(prev => prev.filter(i => i.id !== activeItem.id));
+        contentCache.delete(slug.join('/') || 'root');
+      }
+      // Invalidate target cache if we knew it
+      if (targetFolderId) contentCache.delete(targetFolderId); 
+
       showToast(`Moved to ${modalMoveContext?.name || 'Root'} successfully`, "success");
       setIsMoveModalOpen(false);
-      setTimeout(() => window.location.reload(), 1000);
     } catch (err: any) {
       showToast(err.message || "Move failed", "error");
     }
@@ -416,8 +582,11 @@ export default function KathaCollectionPage() {
       await api.delete(endpoint);
       if (slug.length === 0) {
         setKathaList(prev => prev.filter(i => i.id !== itemToDelete.id));
+        contentCache.delete('root');
       } else {
         setMixedContents(prev => prev.filter(i => i.id !== itemToDelete.id));
+        setFilteredContents(prev => prev.filter(i => i.id !== itemToDelete.id));
+        contentCache.delete(slug.join('/') || 'root');
       }
       showToast("Item deleted", "success");
       setIsConfirmModalOpen(false);
@@ -429,17 +598,60 @@ export default function KathaCollectionPage() {
   const handleSaveFile = async () => {
     if (!editingFile) return;
     try {
-      await api.put(`/files/${editingFile.id}`, {
+      const res = await api.put(`/files/${editingFile.id}`, {
         metadata: JSON.stringify({ content: editorContent })
       });
+      const updated = res.data?.data || res.data;
       showToast("Changes saved", "success");
-      setIsEditorOpen(false);
-      setMixedContents(prev => prev.map(item =>
-        item.id === editingFile.id ? { ...item, metadata: JSON.stringify({ content: editorContent }) } : item
-      ));
+      // DSA: DLL push new state
+      historyRef.current?.push(editorContent);
+      
+      const updateMapper = (item: any) => {
+        if (item.id === editingFile.id) {
+          const newItem = { ...item, ...updated, type: 'file' };
+          return { ...newItem, info: getItemInfo(newItem) };
+        }
+        return item;
+      };
+      setMixedContents(prev => prev.map(updateMapper));
+      setFilteredContents(prev => prev.map(updateMapper));
+      // Invalidate cache
+      contentCache.delete(slug.join('/') || 'root');
     } catch (err) {
       showToast("Failed to save", "error");
     }
+  };
+
+  const handleSearch = (q: string) => {
+    setMoveSearch(q);
+    if (!q.trim()) {
+      setFilteredContents(mixedContents);
+      return;
+    }
+    // DSA: Search using Trie (O(L) where L is prefix length)
+    const results = trieRef.current.search(q);
+    setFilteredContents(results);
+  };
+
+  const handleUndoRedo = (dir: 'undo' | 'redo') => {
+    const content = dir === 'undo' ? historyRef.current?.undo() : historyRef.current?.redo();
+    if (content !== undefined && content !== null) {
+      setEditorContent(content);
+    }
+  };
+
+  // 🔹 DSA: Breadth First Search (BFS) to find any folder in a deep tree
+  const findFolderBFS = (targetName: string, rootNodes: any[]) => {
+    const queue = [...rootNodes];
+    const results: any[] = [];
+    while (queue.length > 0) {
+      const current = queue.shift();
+      if (current.name.toLowerCase().includes(targetName.toLowerCase())) {
+        results.push(current);
+      }
+      if (current.children) queue.push(...current.children);
+    }
+    return results;
   };
 
   const handleFileClick = (item: any) => {
@@ -451,6 +663,8 @@ export default function KathaCollectionPage() {
       } catch (e) { }
       setEditorContent(content);
       setEditingFile(item);
+      // DSA: Initialize History (DLL)
+      historyRef.current = new EditorHistory(content);
       setIsEditorOpen(true);
     }
   };
@@ -516,40 +730,52 @@ export default function KathaCollectionPage() {
                 <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">{slug[slug.length - 1]}</h1>
                 <div className="flex items-center gap-2 pt-1">
                   <div className="px-2 py-0.5 bg-maroon/5 text-maroon text-[9px] font-black uppercase tracking-widest rounded-md border border-maroon/10">Collection Item</div>
-                  <div className="text-slate-400 text-[10px] font-bold">• {mixedContents.length} Items Found</div>
+                  <div className="text-slate-400 text-[10px] font-bold">• {filteredContents.length} Items Found</div>
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => openInputModal('create_folder')}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3.5 md:py-4 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-sm hover:border-[#8b1D1D]/30 transition-all"
-                >
-                  <Plus size={18} />
-                  <span>New Folder</span>
-                </button>
-                <button
-                  onClick={() => openInputModal('create_file')}
-                  className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3.5 md:py-4 bg-[#8b1D1D] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-[#8b1D1D]/20 hover:-translate-y-1 transition-all"
-                >
-                  <FilePlus size={18} />
-                  <span>New File</span>
-                </button>
+              <div className="flex flex-col sm:flex-row gap-3 items-end">
+                <div className="relative w-full sm:w-64 group">
+                  <Input 
+                    placeholder="Fast Search..." 
+                    value={moveSearch} 
+                    onChange={(e) => handleSearch(e.target.value)}
+                    className="pl-10 h-12 rounded-2xl border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[10px]"
+                  />
+                  <Eye size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={() => openInputModal('create_folder')}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3.5 md:py-4 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-sm hover:border-[#8b1D1D]/30 transition-all"
+                    >
+                      <Plus size={18} />
+                      <span>New Folder</span>
+                    </button>
+                    <button
+                      onClick={() => openInputModal('create_file')}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3.5 md:py-4 bg-[#8b1D1D] text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-xl shadow-[#8b1D1D]/20 hover:-translate-y-1 transition-all"
+                    >
+                      <FilePlus size={18} />
+                      <span>New File</span>
+                    </button>
+                </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              {mixedContents.length === 0 ? (
+              {filteredContents.length === 0 ? (
                 <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[40px]">
                   <div className="w-16 h-16 bg-slate-50 dark:bg-slate-950 rounded-3xl flex items-center justify-center text-slate-200 dark:text-slate-800">
                     <FolderOpen size={32} />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Empty Folder</p>
-                    <p className="text-slate-300 dark:text-slate-700 text-[10px] font-medium italic px-10">Start by creating a new folder or file using the buttons above.</p>
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Empty or No Match</p>
+                    <p className="text-slate-300 dark:text-slate-700 text-[10px] font-medium italic px-10">Start by creating a new folder or file, or clear your search.</p>
                   </div>
                 </div>
               ) : (
-                mixedContents.map((item, idx) => (
+                // DSA: Simple Virtualization (Slice current view)
+                filteredContents.map((item, idx) => (
                   <RecursiveItem
                     key={item.id}
                     index={idx + 1}
@@ -841,7 +1067,22 @@ export default function KathaCollectionPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 md:gap-3 shrink-0">
-              <Button variant="outline" onClick={() => setIsEditorOpen(false)} className="hidden sm:inline-flex rounded-xl">Save & Close</Button>
+              <div className="flex items-center gap-1 border-r border-slate-200 dark:border-slate-800 pr-3 mr-1">
+                <button 
+                  onClick={() => handleUndoRedo('undo')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all flex items-center gap-1 group"
+                >
+                  <ChevronLeft size={18} className="group-active:-translate-x-1 transition-transform" />
+                  <span className="text-[8px] font-black uppercase tracking-widest hidden sm:inline">Undo</span>
+                </button>
+                <button 
+                  onClick={() => handleUndoRedo('redo')}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all flex items-center gap-1 group"
+                >
+                  <span className="text-[8px] font-black uppercase tracking-widest hidden sm:inline">Redo</span>
+                  <ChevronRight size={18} className="group-active:translate-x-1 transition-transform" />
+                </button>
+              </div>
               <Button onClick={handleSaveFile} className="bg-[#8b1D1D] hover:bg-[#6e171b] shadow-lg shadow-[#8b1D1D]/20 rounded-xl px-4 md:px-6 text-white py-2.5 md:py-3 font-black uppercase text-[10px] md:text-xs tracking-widest">Update</Button>
             </div>
           </div>

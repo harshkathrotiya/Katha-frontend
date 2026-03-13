@@ -58,7 +58,8 @@ export const RecursiveItem = ({
   return (
     <div
       onClick={onClick}
-      className={`w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 md:p-6 flex flex-col lg:flex-row items-start lg:items-center gap-4 md:gap-6 shadow-sm hover:border-[#8b1D1D]/30 transition-all group cursor-pointer relative overflow-hidden`}
+      style={{ animationDelay: `${index * 50}ms` }}
+      className={`w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-3xl p-4 md:p-6 flex flex-col lg:flex-row items-start lg:items-center gap-4 md:gap-6 shadow-sm hover:border-[#8b1D1D]/30 transition-all group cursor-pointer relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both`}
     >
       <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b1D1D]/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
 

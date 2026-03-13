@@ -1,15 +1,15 @@
 import React from "react";
-import { 
-  Download, 
-  Trash2, 
-  Share2, 
-  User, 
-  Tag, 
-  ChevronUp, 
-  ChevronDown, 
-  Heart, 
-  Edit, 
-  Eye 
+import {
+  Download,
+  Trash2,
+  Share2,
+  User,
+  Tag,
+  ChevronUp,
+  ChevronDown,
+  Heart,
+  Edit,
+  Eye
 } from "lucide-react";
 
 /**
@@ -36,7 +36,7 @@ export const KathaCard = ({
   const [isMobileExposed, setIsMobileExposed] = React.useState(false);
   const title = item.name;
   const date = new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-  const isFav = item.isFav; 
+  const isFav = item.isFav;
 
   const actions = [
     { Icon: Download, label: "Get", onClick: () => { }, bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300" },
@@ -51,7 +51,7 @@ export const KathaCard = ({
 
   return (
     <div
-      className="group relative bg-white dark:bg-slate-900 rounded-[40px] p-5 md:p-6 border border-slate-100 dark:border-slate-800 shadow-[0_4px_25px_rgba(0,0,0,0.04)] hover:shadow-[0_40px_80px_-20px_rgba(139,29,29,0.25)] transition-all duration-700 w-full lg:max-w-[340px] flex flex-col overflow-visible cursor-pointer"
+      className="group relative bg-white dark:bg-slate-900 rounded-[40px] p-5 md:p-6 border border-slate-100 dark:border-slate-800 shadow-[0_4px_25px_rgba(0,0,0,0.04)] hover:shadow-[0_40px_80px_-20px_rgba(139,29,29,0.25)] transition-all duration-700 w-full lg:max-w-[340px] flex flex-col overflow-visible cursor-pointer animate-in fade-in zoom-in-95 duration-700 slide-in-from-bottom-4"
       onClick={() => setIsMobileExposed(!isMobileExposed)}
     >
       <div className="relative aspect-[3/4.2] rounded-[30px] overflow-hidden bg-white dark:bg-slate-950 border-2 border-slate-50 dark:border-slate-800 transition-all duration-700 mb-6 md:mb-8 group-hover:border-[#8b1D1D]/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
@@ -113,7 +113,9 @@ export const KathaCard = ({
       <div className="px-1 md:px-2">
         <h3 className="font-outfit font-black text-slate-900 dark:text-white text-xl md:text-2xl tracking-tighter leading-tight group-hover:text-[#8b1D1D] transition-colors truncate">{title}</h3>
         <div className="flex items-center gap-4 mt-2 md:mt-3">
-          <span className="text-[9px] md:text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">Modified {date}</span>
+          <span className="text-[9px] md:text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">{item.info}</span>
+          <div className="w-1 h-1 rounded-full bg-slate-300" />
+          <span className="text-[9px] md:text-[11px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">{date}</span>
         </div>
       </div>
     </div>
