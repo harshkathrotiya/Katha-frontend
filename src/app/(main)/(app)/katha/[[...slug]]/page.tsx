@@ -26,7 +26,11 @@ import {
   Library,
   FolderOpen,
   BookOpen,
-  ChevronRight
+  ChevronRight,
+  CheckCircle,
+  AlertCircle,
+  XCircle,
+  Upload
 } from "lucide-react";
 
 /**
@@ -256,6 +260,22 @@ export default function KathaCollectionPage() {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
 
+  // Toast State
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' | null }>({ message: '', type: null });
+  
+  // File Upload State
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Deletion Confirm Modal
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: '', type: null }), 3000);
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -310,21 +330,37 @@ export default function KathaCollectionPage() {
   };
 
   const handleInputSubmit = async () => {
-    if (!modalInputValue) return;
+    if (modalType === 'create_folder' && !modalInputValue) return;
+    if (modalType === 'create_file' && !selectedFile) {
+      showToast("Please select a file first", "error");
+      return;
+    }
 
     try {
       if (modalType === 'create_folder') {
         await api.post('/folders', { name: modalInputValue, parentFolderId: currentFolderId });
+        showToast("Folder created successfully", "success");
       } else if (modalType === 'create_file') {
-        await api.post('/files', { name: modalInputValue, parentFolderId: currentFolderId, type: 'DOCUMENT' });
+        const formData = new FormData();
+        formData.append('file', selectedFile!);
+        formData.append('name', modalInputValue || selectedFile!.name);
+        if (currentFolderId) formData.append('parentFolderId', currentFolderId);
+        formData.append('type', 'DOCUMENT');
+        
+        await api.post('/files', formData);
+        showToast("File uploaded successfully", "success");
       } else if (modalType === 'edit' && activeItem) {
         const endpoint = activeItem.type === 'folder' ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
         await api.put(endpoint, { name: modalInputValue });
+        showToast("Renamed successfully", "success");
       }
       setIsInputModalOpen(false);
-      window.location.reload();
-    } catch (err) {
-      alert('Operation failed');
+      setSelectedFile(null);
+      
+      // Refresh after a small delay to show toast
+      setTimeout(() => window.location.reload(), 1000);
+    } catch (err: any) {
+      showToast(err.message || 'Operation failed', 'error');
     }
   };
 
@@ -375,10 +411,24 @@ export default function KathaCollectionPage() {
         message: `Sharing ${activeItem.name || activeItem.title} with you.`
       });
       alert('Share request sent!');
+      showToast(`Share request sent to ${users.find(u => u.id === selectedUser)?.name}`, "success");
       setIsUserModalOpen(false);
       setSelectedUser(null);
     } catch (err) {
-      alert('Failed to send share request');
+      showToast('Failed to send share request', 'error');
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    try {
+      const endpoint = itemToDelete.type === 'folder' ? `/folders/${itemToDelete.id}` : `/files/${itemToDelete.id}`;
+      await api.delete(endpoint);
+      setMixedContents(prev => prev.filter(i => i.id !== itemToDelete.id));
+      showToast("Item deleted", "success");
+      setIsConfirmModalOpen(false);
+    } catch (err) {
+      showToast("Delete failed", "error");
     }
   };
 
@@ -454,8 +504,8 @@ export default function KathaCollectionPage() {
                 title={item.name || item.title} 
                 type={item.type as 'folder' | 'file'}
                 info={item.info} 
-                onTag={() => alert('Tag feature coming soon!')}
-                onBookmark={() => alert('Saved to bookmarks!')}
+                onTag={() => showToast('Tag feature coming soon!', 'info')}
+                onBookmark={() => showToast('Saved to bookmarks!', 'success')}
                 onMoveUp={() => handleReorder(item, 'up')}
                 onMoveDown={() => handleReorder(item, 'down')}
                 onDownload={() => {
@@ -463,19 +513,20 @@ export default function KathaCollectionPage() {
                       try {
                         const meta = JSON.parse(item.metadata);
                         if (meta.url) window.open(meta.url, '_blank');
-                        else alert('No download link');
-                      } catch(e) { alert('Info corrupted'); }
-                   } else alert('Download (merged document) coming soon for folders');
+                        else showToast('No download link', 'error');
+                      } catch(e) { showToast('Info corrupted', 'error'); }
+                   } else showToast('Download coming soon for folders', 'info');
                 }}
-                onShare={() => alert('Share link copied!')}
+                onShare={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  showToast('Link copied to clipboard', 'success');
+                }}
                 onUser={() => handleShareClick(item)}
-                onMove={() => alert('Move feature coming soon!')}
+                onMove={() => showToast('Move feature coming soon!', 'info')}
                 onEdit={() => openInputModal('edit', item)}
-                onDelete={async () => {
-                  if (!confirm('Delete this item?')) return;
-                  const endpoint = item.type === 'folder' ? `/folders/${item.id}` : `/files/${item.id}`;
-                  await api.delete(endpoint);
-                  setMixedContents(prev => prev.filter(i => i.id !== item.id));
+                onDelete={() => {
+                  setItemToDelete(item);
+                  setIsConfirmModalOpen(true);
                 }}
                 onClick={() => {
                   if (item.type === 'folder') {
@@ -500,21 +551,88 @@ export default function KathaCollectionPage() {
           footer={
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => setIsInputModalOpen(false)}>Cancel</Button>
-              <Button onClick={handleInputSubmit} className="bg-[#8b1D1D] hover:bg-[#6e171b]">Confirm</Button>
+              <Button onClick={handleInputSubmit} className="bg-[#8b1D1D] hover:bg-[#6e171b]">
+                {modalType === 'create_file' ? 'Upload' : 'Confirm'}
+              </Button>
             </div>
           }
         >
           <div className="space-y-4">
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Item Name</p>
+            {modalType === 'create_file' && (
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full aspect-video rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center gap-3 cursor-pointer hover:border-[#8b1D1D]/30 hover:bg-[#8b1D1D]/5 transition-all mb-4"
+              >
+                <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+                  <Upload size={24} className="text-slate-400" />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {selectedFile ? selectedFile.name : 'Click to select file'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium">MAX SIZE: 50MB</p>
+                </div>
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  className="hidden" 
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setSelectedFile(file);
+                      if (!modalInputValue) setModalInputValue(file.name);
+                    }
+                  }} 
+                />
+              </div>
+            )}
+            
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">
+              {modalType === 'create_file' ? 'Display Name' : 'Item Name'}
+            </p>
             <Input 
               placeholder={modalPlaceholder} 
               value={modalInputValue} 
               onChange={(e) => setModalInputValue(e.target.value)}
               className="rounded-xl border-slate-200"
-              autoFocus
+              autoFocus={modalType !== 'create_file'}
             />
           </div>
         </Modal>
+
+        {/* Confirmation Modal */}
+        <Modal
+          isOpen={isConfirmModalOpen}
+          onClose={() => setIsConfirmModalOpen(false)}
+          title="Confirm Delete"
+          footer={
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>No, Keep it</Button>
+              <Button onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">Yes, Delete</Button>
+            </div>
+          }
+        >
+          <div className="py-4">
+            <p className="text-slate-600 dark:text-slate-300 font-medium">
+              Are you sure you want to delete <span className="font-bold text-[#8b1D1D]">"{itemToDelete?.name || itemToDelete?.title}"</span>? This action moved it to trash.
+            </p>
+          </div>
+        </Modal>
+
+        {/* Toast System */}
+        {toast.message && (
+          <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] animate-in slide-in-from-bottom-5 fade-in duration-300">
+            <div className={`px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 min-w-[300px] border ${
+              toast.type === 'success' ? 'bg-emerald-50 border-emerald-100 text-emerald-800' :
+              toast.type === 'error' ? 'bg-red-50 border-red-100 text-red-800' :
+              'bg-slate-900 border-slate-800 text-white'
+            }`}>
+              {toast.type === 'success' ? <CheckCircle size={20} /> : 
+               toast.type === 'error' ? <XCircle size={20} /> : <AlertCircle size={20} />}
+              <span className="text-sm font-bold tracking-tight">{toast.message}</span>
+            </div>
+          </div>
+        )}
 
         {/* User Selection Modal for Sharing */}
         <Modal 

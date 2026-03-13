@@ -15,11 +15,15 @@ function onRefreshed(token: string) {
 export async function fetcher(url: string, options: RequestInit = {}): Promise<any> {
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
 
-    const headers = {
-        "Content-Type": "application/json",
+    const headers: any = {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
     };
+
+    // Only set Content-Type if we are sending JSON and it's not already set
+    if (options.body && !(options.body instanceof FormData) && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+    }
 
     const response = await fetch(`${API_URL}${url}`, {
         ...options,
@@ -94,8 +98,8 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
 export const api = {
     get: (url: string, options?: RequestInit) => fetcher(url, { ...options, method: "GET" }),
     post: (url: string, body: any, options?: RequestInit) =>
-        fetcher(url, { ...options, method: "POST", body: JSON.stringify(body) }),
+        fetcher(url, { ...options, method: "POST", body: body instanceof FormData ? body : JSON.stringify(body) }),
     put: (url: string, body: any, options?: RequestInit) =>
-        fetcher(url, { ...options, method: "PUT", body: JSON.stringify(body) }),
+        fetcher(url, { ...options, method: "PUT", body: body instanceof FormData ? body : JSON.stringify(body) }),
     delete: (url: string, options?: RequestInit) => fetcher(url, { ...options, method: "DELETE" }),
 };
