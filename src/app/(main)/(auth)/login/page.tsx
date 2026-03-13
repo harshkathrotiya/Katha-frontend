@@ -36,7 +36,8 @@ export default function LoginPage() {
                 email,
                 password,
                 deviceId,
-                deviceName: "Web Browser"
+                deviceName: "Web Browser",
+                platform: "web"
             });
 
             if (response.success) {
@@ -140,18 +141,10 @@ export default function LoginPage() {
 
                 <div className="mt-[25px] flex flex-col gap-[15px]">
                     <Button
-                        type="button"
-                        variant="maroon"
-                        className="w-full h-[55px] border-none rounded-[12px] text-[18px] font-medium cursor-pointer shadow-lg"
-                    >
-                        Send Login Request
-                    </Button>
-
-                    <Button
                         type="submit"
-                        variant="gray"
+                        variant="maroon"
                         disabled={isLoading}
-                        className="w-full h-[55px] border-none rounded-[12px] text-[18px] font-medium shadow-sm"
+                        className="w-full h-[55px] border-none rounded-[12px] text-[18px] font-medium shadow-lg"
                     >
                         {isLoading ? "Signing in..." : "Login"}
                     </Button>
