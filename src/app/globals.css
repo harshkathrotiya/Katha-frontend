@@ -77,3 +77,53 @@
 .hover-lift:hover {
   transform: translateY(-4px);
 }
+/* Quill Editor Overrides */
+.ql-toolbar.ql-snow {
+  border: none !important;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0 !important;
+  padding: 12px !important;
+  border-radius: 20px 20px 0 0 !important;
+}
+
+.dark .ql-toolbar.ql-snow {
+  background: #1e293b;
+  border-bottom: 1px solid #334155 !important;
+}
+
+.ql-container.ql-snow {
+  border: none !important;
+  font-family: inherit !important;
+  font-size: 16px !important;
+}
+
+.ql-editor {
+  padding: 40px !important;
+  min-height: 500px;
+  line-height: 1.8 !important;
+  color: inherit !important;
+}
+
+.ql-editor p {
+  margin-bottom: 1.5em !important;
+}
+
+.ql-editor-premium .ql-editor:focus {
+  outline: none;
+}
+
+.ql-snow .ql-stroke {
+  stroke: #64748b !important;
+}
+
+.dark .ql-snow .ql-stroke {
+  stroke: #94a3b8 !important;
+}
+
+.ql-snow .ql-picker {
+  color: #64748b !important;
+}
+
+.dark .ql-snow .ql-picker {
+  color: #94a3b8 !important;
+}
