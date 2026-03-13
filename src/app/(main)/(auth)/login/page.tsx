@@ -48,6 +48,8 @@ export default function LoginPage() {
                 localStorage.setItem("refresh_token", tokens.refreshToken);
                 localStorage.setItem("user_id", user.id);
                 localStorage.setItem("user_role", user.role);
+                localStorage.setItem("user_name", user.name);
+                localStorage.setItem("user_email", user.email);
                 localStorage.setItem("device_id", deviceId);
 
                 // Set cookie for middleware (server-side protection)

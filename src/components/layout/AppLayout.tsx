@@ -13,10 +13,12 @@ interface NavItem {
 import { Search, Bell, Moon, Sun, User, ChevronDown, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
+    const { user } = useAuth();
     const { theme, setTheme, resolvedTheme } = useTheme();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [mounted, setMounted] = useState(false);
@@ -84,7 +86,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
                                 <User className="h-3.5 w-3.5 md:h-4 md:w-4 text-slate-600 dark:text-slate-400" />
                             </div>
-                            <span className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300 hidden sm:block">Admin</span>
+                            <span className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300 hidden sm:block">
+                                {user?.name || "User"}
+                            </span>
                             <ChevronDown className={`h-3.5 w-3.5 md:h-4 md:w-4 text-slate-400 group-hover:text-slate-600 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
                         </div>
 

@@ -28,12 +28,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 const role = localStorage.getItem("user_role");
 
                 if (token) {
-                    // In a real app, we'd fetch profile here. 
-                    // For now, let's just restore minimal user state from local storage.
+                    const name = localStorage.getItem("user_name");
+                    const email = localStorage.getItem("user_email");
+                    
                     setUser({
-                        id: "current",
-                        name: "Admin User",
-                        email: "admin@katha.com",
+                        id: localStorage.getItem("user_id") || "current",
+                        name: name || "User",
+                        email: email || "user@katha.com",
                         role: role || "USER"
                     });
                 }

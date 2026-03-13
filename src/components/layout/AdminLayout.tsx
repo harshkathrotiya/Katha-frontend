@@ -3,9 +3,11 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/providers/AuthProvider";
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const { user } = useAuth();
 
     const navItems = [
         { label: "Dashboard", href: "/admin/dashboard", icon: <ChartIcon /> },
@@ -52,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="h-16 flex items-center justify-end px-8 border-b border-slate-800 bg-slate-950">
                     <div className="flex items-center gap-3">
-                        <span className="text-sm font-medium text-slate-300">Admin User</span>
+                        <span className="text-sm font-medium text-slate-300">{user?.name || "Admin User"}</span>
                         <div className="h-8 w-8 rounded bg-slate-700" />
                     </div>
                 </header>

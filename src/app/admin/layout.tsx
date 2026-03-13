@@ -30,7 +30,7 @@ const menuItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
     const { theme, setTheme } = useTheme();
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
     const [mounted, setMounted] = React.useState(false);
@@ -160,8 +160,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         </div>
                         {isSidebarOpen && (
                             <div className="flex-1 min-w-0 animate-in fade-in">
-                                <p className={`text-xs font-bold truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>Administrator</p>
-                                <p className="text-[9px] text-slate-400 font-medium tracking-wide">Main Admin</p>
+                                <p className={`text-xs font-bold truncate ${isDark ? "text-slate-200" : "text-slate-800"}`}>{user?.name || "Admin"}</p>
+                                <p className="text-[9px] text-slate-400 font-medium tracking-wide truncate">{user?.email || "admin@katha.com"}</p>
                             </div>
                         )}
                     </div>
