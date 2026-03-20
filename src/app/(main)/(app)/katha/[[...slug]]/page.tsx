@@ -333,7 +333,7 @@ export default function KathaCollectionPage() {
           res = await api.post('/folders', { name: modalInputValue, parentFolderId: currentFolderId });
           const newFolder = res.data?.data || res.data;
           processedItem = { ...newFolder, type: 'folder', info: getItemInfoMemo({ ...newFolder, type: 'folder' }) };
-          
+
           const finalMapper = (it: any) => it.id === tempId ? processedItem : it;
           if (slug.length === 0) setKathaList(prev => prev.map(finalMapper));
           else {
@@ -359,7 +359,7 @@ export default function KathaCollectionPage() {
           res = await api.post('/folders', { name: modalInputValue, section: 'KATHA' });
           const newCol = res.data?.data || res.data;
           processedItem = { ...newCol, type: 'folder', info: getItemInfoMemo({ ...newCol, type: 'folder' }) };
-          
+
           const finalMapper = (it: any) => it.id === tempId ? processedItem : it;
           setKathaList(prev => prev.map(finalMapper));
           contentCache.delete('root');
@@ -385,7 +385,7 @@ export default function KathaCollectionPage() {
           });
           const newFile = res.data?.data || res.data;
           processedItem = { ...newFile, type: 'file', info: getItemInfoMemo({ ...newFile, type: 'file' }) };
-          
+
           const finalMapper = (it: any) => it.id === tempId ? processedItem : it;
           setMixedContents(prev => prev.map(finalMapper));
           setFilteredContents(prev => prev.map(finalMapper));
@@ -400,7 +400,7 @@ export default function KathaCollectionPage() {
       } else if (modalType === 'edit' && activeItem) {
         const oldName = activeItem.name || activeItem.title;
         const endpoint = activeItem.type === 'folder' ? `/folders/${activeItem.id}` : `/files/${activeItem.id}`;
-        
+
         // Optimistic Rename
         const mapper = (it: any) => it.id === activeItem.id ? { ...it, name: modalInputValue, title: modalInputValue } : it;
         if (slug.length === 0) setKathaList(prev => prev.map(mapper));
@@ -827,90 +827,87 @@ export default function KathaCollectionPage() {
       {slug.length > 0 ? (
         <div className="min-h-full bg-slate-50 dark:bg-slate-950 flex flex-col relative transition-colors duration-500 font-outfit pb-20 w-full">
           {/* List Header / Breadcrumbs */}
-          <div className="px-5 md:px-10 py-4 md:py-6 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl sticky top-0 z-40 w-full shadow-sm">
-            <div className="flex items-center gap-3 overflow-hidden">
-              <button
-                onClick={() => router.back()}
-                className="p-2 md:px-4 md:py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:text-[#8b1D1D] transition-all text-sm font-black shadow-sm shrink-0"
-              >
-                <ArrowLeft size={16} />
-              </button>
-              <button
-                onClick={() => router.push("/katha")}
-                className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl hover:text-[#8b1D1D] transition-all text-sm font-black shadow-sm shrink-0"
-              >
-                <Home size={16} />
-                <span className="hidden sm:inline">Home</span>
-              </button>
+          {/* Optimized Topbar: Integrated Search, Sort & Actions */}
+          <div className="px-4 md:px-8 py-2 md:py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl sticky top-0 z-40 w-full shadow-sm">
+            <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
+              <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
+                <button
+                  onClick={() => router.back()}
+                  className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-sm font-black shadow-sm"
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <button
+                  onClick={() => router.push("/katha")}
+                  className="p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-sm font-black shadow-sm"
+                >
+                  <Home size={16} />
+                </button>
+              </div>
 
               <div className="h-6 w-px bg-slate-200 dark:bg-slate-800 mx-1 shrink-0" />
 
-              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
-                {slug.map((s, i) => (
-                  <React.Fragment key={i}>
-                    <span className="text-[10px] md:text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap">{s}</span>
-                    {i < slug.length - 1 && <ChevronRight size={14} className="text-slate-300 shrink-0" />}
-                  </React.Fragment>
-                ))}
+              <div className="flex flex-col min-w-0 pr-4">
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <p className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[8px] md:text-[9px] shrink-0">Folder View /</p>
+                  <div className="flex items-center gap-1 overflow-x-auto no-scrollbar scroll-smooth">
+                    {slug.map((s, i) => (
+                      <React.Fragment key={i}>
+                        <span className="text-[10px] md:text-xs font-black text-slate-900 dark:text-white uppercase tracking-tight whitespace-nowrap">{s}</span>
+                        {i < slug.length - 1 && <ChevronRight size={12} className="text-slate-300 shrink-0" />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <div className="px-1.5 py-0.5 bg-maroon/5 text-maroon text-[7px] md:text-[8px] font-black uppercase tracking-widest rounded border border-maroon/10 shrink-0">Collection Item</div>
+                  <div className="text-slate-400 text-[8px] md:text-[9px] font-bold whitespace-nowrap">• {filteredContents.length} Items Found</div>
+                </div>
               </div>
             </div>
 
-            <div className="hidden md:flex flex-col items-end">
-              <span className="text-slate-400 font-bold uppercase tracking-[0.2em] text-[9px]">Status</span>
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">Active Explorer</span>
+            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+              <div className="relative flex-1 sm:flex-none sm:w-60 group">
+                <Input
+                  placeholder="Fast Search..."
+                  value={moveSearch}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-9 h-9 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[8px] md:text-[9px]"
+                />
+                <Eye size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />
+              </div>
+
+              <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-xl items-center gap-0.5 border border-slate-200 dark:border-slate-800 shrink-0">
+                <button onClick={() => setSortBy('name')} className={`px-2.5 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Name</button>
+                <button onClick={() => setSortBy('date')} className={`px-2.5 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'date' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Date</button>
+                <button onClick={() => setSortBy('size')} className={`px-2.5 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'size' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Size</button>
+                <div className="w-px h-3 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+                <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1.5 text-slate-400 hover:text-maroon transition-colors">
+                  {sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
+                </button>
+              </div>
+
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => openInputModal('create_folder')}
+                  className="flex items-center gap-1.5 px-3 md:px-4 py-2 bg-white dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl font-black uppercase tracking-widest text-[8px] md:text-[9px] shadow-sm hover:border-maroon/30 transition-all font-outfit"
+                >
+                  <Plus size={14} />
+                  <span>Folder</span>
+                </button>
+                <button
+                  onClick={() => openInputModal('create_file')}
+                  className="flex items-center gap-1.5 px-3 md:px-4 py-2 bg-maroon text-white rounded-xl font-black uppercase tracking-widest text-[8px] md:text-[9px] shadow-lg shadow-maroon/20 hover:-translate-y-0.5 transition-all font-outfit"
+                >
+                  <FilePlus size={14} />
+                  <span>File</span>
+                </button>
               </div>
             </div>
           </div>
 
-          <div className="p-4 md:p-10 max-w-[1600px] mx-auto w-full space-y-4 md:space-y-6">
-            <div className="mb-8 md:mb-12 flex flex-col sm:flex-row sm:items-end justify-between gap-5">
-              <div className="space-y-1">
-                <p className="text-slate-400 font-bold uppercase tracking-[0.3em] text-[10px]">Folder View</p>
-                <h1 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">{slug[slug.length - 1]}</h1>
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="px-2 py-0.5 bg-maroon/5 text-maroon text-[9px] font-black uppercase tracking-widest rounded-md border border-maroon/10">Collection Item</div>
-                  <div className="text-slate-400 text-[10px] font-bold">• {filteredContents.length} Items Found</div>
-                </div>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 items-end">
-                <div className="relative w-full sm:w-64 group">
-                  <Input
-                    placeholder="Fast Search..."
-                    value={moveSearch}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="pl-10 h-10 rounded-xl border-slate-200 dark:border-slate-800 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm group-hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[9px]"
-                  />
-                  <Eye size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />
-                </div>
-                <div className="flex bg-slate-100 dark:bg-slate-900 p-1 rounded-xl items-center gap-1 border border-slate-200 dark:border-slate-800">
-                  <button onClick={() => setSortBy('name')} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Name</button>
-                  <button onClick={() => setSortBy('date')} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'date' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Date</button>
-                  <button onClick={() => setSortBy('size')} className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'size' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Size</button>
-                  <div className="w-px h-3 bg-slate-300 dark:bg-slate-700 mx-1" />
-                  <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1.5 text-slate-400 hover:text-maroon transition-colors">
-                    {sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
-                  </button>
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <button
-                    onClick={() => openInputModal('create_folder')}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 rounded-xl font-black uppercase tracking-widest text-[9px] shadow-sm hover:border-[#8b1D1D]/30 transition-all"
-                  >
-                    <Plus size={16} />
-                    <span>New Folder</span>
-                  </button>
-                  <button
-                    onClick={() => openInputModal('create_file')}
-                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-5 md:px-6 py-3 bg-[#8b1D1D] text-white rounded-xl font-black uppercase tracking-widest text-[9px] shadow-xl shadow-[#8b1D1D]/20 hover:-translate-y-0.5 transition-all"
-                  >
-                    <FilePlus size={16} />
-                    <span>New File</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+
+          <div className="p-4 md:px-10 md:py-4 max-w-[1700px] mx-auto w-full space-y-4 md:space-y-6">
 
             <div className="space-y-4">
               {getSortedItems(filteredContents).length === 0 ? (
@@ -970,35 +967,31 @@ export default function KathaCollectionPage() {
         </div>
       ) : (
         <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col relative pb-32 w-full">
-          <div className="px-5 md:px-12 py-6 md:py-8 flex items-center justify-between border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl z-40 w-full">
+          <div className="px-5 md:px-10 py-3 md:py-4 flex items-center justify-between border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl z-40 w-full shadow-sm">
             <div className="flex items-center gap-3 md:gap-4">
               <button
                 onClick={() => router.push("/user")}
-                className="p-2 md:px-4 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl hover:text-[#8b1D1D] transition-all text-sm font-black shadow-sm shrink-0 flex items-center gap-2"
+                className="p-1.5 md:px-3 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-[#8b1D1D] transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 flex items-center gap-2"
               >
-                <LayoutDashboard size={18} />
+                <LayoutDashboard size={14} />
                 <span className="hidden md:inline">Dashboard</span>
               </button>
-              <div className="w-10 h-10 md:w-12 md:h-12 bg-maroon/5 flex items-center justify-center rounded-xl md:rounded-2xl border border-maroon/10 text-maroon">
-                <Library className="w-5 h-5 md:w-6 md:h-6" />
+              <div className="w-8 h-8 md:w-10 md:h-10 bg-maroon/5 flex items-center justify-center rounded-lg md:rounded-xl border border-maroon/10 text-maroon">
+                <Library className="w-4 h-4 md:w-5 md:h-5" />
               </div>
-              <h1 className="text-xl md:text-3xl font-black text-slate-900 dark:text-white font-outfit tracking-tighter uppercase leading-none">Katha Gallery</h1>
+              <h1 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white font-outfit tracking-tighter uppercase leading-none">Katha Gallery</h1>
             </div>
 
             <button
               onClick={() => openInputModal('create_collection')}
-              className="flex items-center gap-2 px-4 md:px-8 py-3 md:py-4 bg-[#8b1D1D] hover:bg-[#6e171b] text-white rounded-xl md:rounded-[22px] font-black uppercase tracking-widest text-[9px] md:text-xs shadow-2xl shadow-[#8b1D1D]/30 hover:-translate-y-1 transition-all"
+              className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-maroon hover:bg-[#6e171b] text-white rounded-xl font-black uppercase tracking-widest text-[8px] md:text-[10px] shadow-lg shadow-maroon/20 hover:-translate-y-0.5 transition-all"
             >
-              <Plus size={18} strokeWidth={3} />
+              <Plus size={16} strokeWidth={3} />
               <span>New Collection</span>
             </button>
           </div>
 
-          <div className="px-5 md:px-10 py-10 md:py-16 max-w-[1700px] mx-auto w-full">
-            <div className="mb-10 md:mb-16">
-              <p className="text-slate-400 font-bold uppercase tracking-[0.4em] text-[10px] mb-1">Explore</p>
-              <h2 className="text-3xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tighter uppercase leading-none">Your Collections</h2>
-            </div>
+          <div className="px-5 md:px-10 py-6 md:py-10 max-w-[1700px] mx-auto w-full">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
               {kathaList.map((item, idx) => (

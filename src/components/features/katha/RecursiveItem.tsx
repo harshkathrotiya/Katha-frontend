@@ -12,7 +12,9 @@ import {
   Move, 
   Edit, 
   Trash2, 
-  Eye 
+  Eye,
+  EyeOff,
+  Copy
 } from "lucide-react";
 import { MiniAction } from "./MiniAction";
 
@@ -89,22 +91,22 @@ export const RecursiveItem = ({
       <div className="flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-2 w-full lg:flex-1">
         <div className="flex flex-wrap items-center justify-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative w-full sm:w-auto">
           <div className="flex items-center gap-1 px-0.5 md:px-1">
+            {/* User Requested Sequence: Bookmark, Hide, Tag, Copy, Pin, Download, Share, User Share */}
+            <MiniAction Icon={Heart} label="Bookmark" onClick={onFav} color={isFav ? "text-amber-500" : "text-slate-400 hover:text-amber-500"} />
+            <MiniAction Icon={EyeOff} label="Hide" onClick={() => {}} color="text-slate-400 hover:text-slate-600" />
             <MiniAction Icon={Tag} label="Tag" onClick={onTag} color="text-indigo-500 hover:text-indigo-600" />
-            <MiniAction Icon={Heart} label="Favourite" onClick={onFav} color={isFav ? "text-amber-500" : "text-slate-400 hover:text-amber-500"} />
-            <MiniAction Icon={Pin} label={isPinned ? "Unpin" : "Pin"} onClick={onPin} color={isPinned ? "text-[#8b1D1D] fill-[#8b1D1D]/10" : "text-slate-400 hover:text-[#8b1D1D]"} />
+            <MiniAction Icon={Copy} label="Copy Name" onClick={() => navigator.clipboard.writeText(title)} color="text-blue-500 hover:text-blue-600" />
           </div>
           <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
           <div className="flex items-center gap-1 px-0.5 md:px-1">
+            <MiniAction Icon={Pin} label={isPinned ? "Unpin" : "Pin"} onClick={onPin} color={isPinned ? "text-[#8b1D1D] fill-[#8b1D1D]/10" : "text-slate-400 hover:text-[#8b1D1D]"} />
             <MiniAction Icon={Download} label="Download" onClick={onDownload} color="text-blue-500 hover:text-blue-600" />
             <MiniAction Icon={Share2} label="Share" onClick={onShare} color="text-emerald-500 hover:text-emerald-600" />
+            <MiniAction Icon={User} label="User Share" onClick={onUser} color="text-purple-500 hover:text-purple-600" />
           </div>
           <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
           <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={User} label="User" onClick={onUser} color="text-purple-500 hover:text-purple-600" />
             <MiniAction Icon={Move} label="Move" onClick={onMove} color="text-slate-500 hover:text-slate-900" />
-          </div>
-          <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
-          <div className="flex items-center gap-1 px-0.5 md:px-1">
             <MiniAction Icon={Edit} label="Edit" onClick={onEdit} color="text-slate-500 hover:text-slate-900" />
             <MiniAction Icon={Trash2} label="Delete" onClick={onDelete} color="text-red-500 hover:text-red-600" />
           </div>

@@ -9,7 +9,11 @@ import {
   ChevronDown,
   Heart,
   Edit,
-  Eye
+  Eye,
+  EyeOff,
+  Copy,
+  Pin,
+  Users
 } from "lucide-react";
 
 /**
@@ -39,14 +43,18 @@ export const KathaCard = ({
   const isFav = item.isFav;
 
   const actions = [
-    { Icon: Download, label: "Get", onClick: () => { }, bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300" },
-    { Icon: Trash2, label: "Delete", onClick: onDelete, bg: "bg-red-100 dark:bg-red-900/40", text: "text-red-700 dark:text-red-300" },
-    { Icon: Share2, label: "Share", onClick: () => { }, bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300" },
-    { Icon: Heart, label: "Favourite", onClick: onToggleFav, bg: isFav ? "bg-[#8b1D1D] text-white" : "bg-amber-100 dark:bg-amber-900/40", text: isFav ? "text-white" : "text-amber-700 dark:text-amber-300" },
-    { Icon: User, label: "Owner", onClick: () => { }, bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-700 dark:text-purple-300" },
+    { Icon: Heart, label: "Bookmark", onClick: onToggleFav, bg: isFav ? "bg-maroon text-white" : "bg-amber-100 dark:bg-amber-900/40", text: isFav ? "text-white" : "text-amber-700 dark:text-amber-300" },
+    { Icon: EyeOff, label: "Hide", onClick: () => { }, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-500 dark:text-slate-400" },
     { Icon: Tag, label: "Tag", onClick: () => { }, bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300" },
-    { Icon: ChevronUp, label: "Move Up", onClick: onMoveUp, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-200" },
-    { Icon: ChevronDown, label: "Move Down", onClick: onMoveDown, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-200" },
+    { Icon: Copy, label: "Copy link", onClick: () => {
+      navigator.clipboard.writeText(window.location.origin + `/katha/${item.name}`);
+    }, bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300" },
+    { Icon: Pin, label: "Pin", onClick: () => { }, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-200" },
+    { Icon: Download, label: "Download", onClick: () => { }, bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300" },
+    { Icon: Share2, label: "Share", onClick: () => {
+      navigator.clipboard.writeText(window.location.origin + `/katha/${item.name}`);
+    }, bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-700 dark:text-purple-300" },
+    { Icon: Users, label: "User Share", onClick: () => { }, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-200" },
   ];
 
   return (
@@ -67,46 +75,65 @@ export const KathaCard = ({
           <div className="text-slate-400 dark:text-slate-500 font-bold text-[9px] md:text-[10px] uppercase tracking-[0.4em]">SGVP Katha</div>
         </div>
 
-        <div className={`absolute bottom-0 left-0 w-full bg-[#8b1D1D] dark:bg-[#a32b2b] py-3.5 px-3 text-center z-10 shadow-[0_-15px_30px_rgba(0,0,0,0.2)] transition-transform duration-500 group-hover:translate-y-full ${isMobileExposed ? 'translate-y-full' : ''}`}>
+        <div className={`absolute bottom-0 left-0 w-full bg-maroon dark:bg-[#a32b2b] py-3.5 px-3 text-center z-10 shadow-[0_-15px_30px_rgba(0,0,0,0.2)] transition-all duration-700 group-hover:translate-y-full group-hover:opacity-0 ${isMobileExposed ? 'translate-y-full opacity-0' : ''}`}>
           <span className="text-white text-[10px] md:text-xs font-black tracking-[0.1em] uppercase truncate block">{title}</span>
         </div>
 
-        <div className={`absolute inset-0 z-20 flex flex-col justify-center gap-4 md:gap-6 p-5 md:p-6 transition-all duration-500 bg-white/95 dark:bg-slate-950/95 cursor-default ${isMobileExposed ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto'}`}>
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] md:text-[11px] font-black text-[#8b1D1D] uppercase tracking-widest whitespace-nowrap">Actions</span>
-            <div className="h-[2px] w-full bg-[#8b1D1D]/10 rounded-full" />
+        <div 
+          className={`absolute inset-0 z-20 flex flex-col justify-center gap-3 md:gap-5 p-5 md:p-6 transition-all duration-700 ease-[cubic-bezier(0.23,1,0.32,1)] bg-white/70 dark:bg-slate-950/70 backdrop-blur-2xl cursor-default border-inset border-white/20 dark:border-slate-800/20 ${
+            isMobileExposed 
+              ? 'opacity-100 translate-y-0 pointer-events-auto' 
+              : 'opacity-0 translate-y-4 pointer-events-none group-hover:opacity-100 group-hover:translate-y-0 group-hover:pointer-events-auto'
+          }`}
+        >
+          <div className="mb-2 animate-in fade-in slide-in-from-top-4 duration-500 delay-100">
+            <h4 className="text-sm md:text-lg font-black text-slate-900 dark:text-white uppercase tracking-tighter leading-none truncate">{title}</h4>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[8px] md:text-[9px] font-black text-maroon uppercase tracking-widest">{item.info}</span>
+              <div className="w-1 h-1 rounded-full bg-slate-200 dark:bg-slate-800" />
+              <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest">{date}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-left-4 duration-500 delay-150">
+            <span className="text-[10px] md:text-[11px] font-black text-maroon uppercase tracking-[0.3em] whitespace-nowrap text-opacity-70">Actions</span>
+            <div className="h-[1px] w-full bg-gradient-to-r from-maroon/20 to-transparent rounded-full" />
           </div>
 
           <div className="grid grid-cols-4 gap-2 md:gap-3.5">
             {actions.map((action, idx) => (
-              <div key={idx} className="flex flex-col items-center gap-1 group/item">
+              <div 
+                key={idx} 
+                className="flex flex-col items-center gap-1 group/item transition-all duration-700"
+                style={{ transitionDelay: `${idx * 40}ms` }}
+              >
                 <button
                   onClick={(e) => { e.stopPropagation(); action.onClick(); }}
-                  className={`aspect-square w-full ${action.bg} ${action.text} rounded-xl md:rounded-[20px] flex flex-col items-center justify-center transition-all duration-500 hover:scale-125 hover:z-30 hover:shadow-xl active:scale-95 group/btn border border-transparent hover:border-white/10`}
+                  className={`aspect-square w-full ${action.bg} ${action.text} rounded-2xl flex flex-col items-center justify-center transition-all duration-500 hover:scale-125 hover:z-30 hover:shadow-2xl active:scale-90 group/btn border border-white/10 dark:border-slate-800/50 hover:border-maroon/20 hover:rotate-3 shadow-md shadow-black/5`}
+                  title={action.label}
                 >
-                  <action.Icon className="h-4 w-4 md:h-6 md:w-6 stroke-[2.5px] transition-transform group-hover/btn:rotate-12" />
+                  <action.Icon className="h-4 w-4 md:h-5 md:w-5 stroke-[2.5px] transition-transform duration-500 group-hover/btn:rotate-12 group-hover/btn:scale-110" />
                 </button>
               </div>
             ))}
           </div>
 
-          <div className="mt-2">
+          <div className="space-y-2 mt-2">
             <button
               onClick={(e) => { e.stopPropagation(); onEdit(); }}
-              className="w-full py-3 bg-[#8b1D1D] text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[#6e171b] transition-all active:scale-95 shadow-lg shadow-[#8b1D1D]/20"
+              className="w-full py-3 bg-white dark:bg-slate-900 text-maroon dark:text-red-400 border-2 border-maroon/10 hover:border-maroon/30 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-black/5 duration-500 animate-in fade-in slide-in-from-bottom-4 delay-300 group-hover:translate-y-0"
             >
-              <Edit size={14} />
-              <span>Rename Collection</span>
+              <Edit size={14} className="group-hover:rotate-12 transition-transform" />
+              <span>Rename</span>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); onOpen(); }}
+              className="w-full py-3.5 md:py-4 bg-maroon text-white rounded-[22px] text-[10px] md:text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 shadow-xl shadow-maroon/20 hover:shadow-maroon/40 hover:-translate-y-1 transition-all active:scale-95 duration-500 animate-in fade-in slide-in-from-bottom-6 delay-500"
+            >
+              <Eye size={18} strokeWidth={3} className="animate-pulse" />
+              <span>Open Collection</span>
             </button>
           </div>
-
-          <button
-            onClick={(e) => { e.stopPropagation(); onOpen(); }}
-            className="w-full py-3 md:py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl md:rounded-[22px] text-[10px] md:text-xs font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 shadow-2xl hover:-translate-y-1 transition-all active:scale-95"
-          >
-            <Eye className="h-4 w-4 md:h-5 md:w-5 stroke-[2.5px]" />
-            <span>Open Collection</span>
-          </button>
         </div>
       </div>
 
