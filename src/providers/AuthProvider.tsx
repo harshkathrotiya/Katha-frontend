@@ -49,6 +49,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, []);
 
     useEffect(() => {
+        // If we are on the login page, we don't need to verify the session
+        // (the middleware already redirects us away if we have a valid session cookie).
+        if (typeof window !== "undefined" && window.location.pathname === "/login") {
+            setIsLoading(false);
+            return;
+        }
+
         // Optimistic: pre-fill from localStorage so the UI is instant,
         // then verify with the server in the background.
         const cachedName = typeof window !== "undefined" ? localStorage.getItem("user_name") : null;

@@ -62,8 +62,15 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
                 onRefreshed(false);
 
                 if (typeof window !== "undefined") {
-                    // Reset session dead on login page so users can try again
-                    window.location.href = "/login";
+                    // Force clear user_role cookie if possible (it's not HttpOnly)
+                    // This helps middleware stop thinking we are logged in
+                    document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                    document.cookie = "user_id=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+
+                    // Only redirect/reload if we aren't already on the login page
+                    if (window.location.pathname !== "/login") {
+                        window.location.href = "/login";
+                    }
                 }
                 throw new Error("Session expired. Please log in again.");
             }
@@ -84,6 +91,10 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
         (error as any).error = errorBody.error;
         (error as any).data = errorBody.data;
         throw error;
+    }
+
+    if (url.includes("/auth/login")) {
+        isSessionDead = false;
     }
 
     return response.json();
