@@ -1,6 +1,7 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 let isRefreshing = false;
+let isSessionDead = false;
 let refreshSubscribers: ((ok: boolean) => void)[] = [];
 
 function onRefreshed(ok: boolean) {
@@ -14,6 +15,11 @@ function onRefreshed(ok: boolean) {
  * The browser attaches them automatically via credentials: 'include'.
  */
 export async function fetcher(url: string, options: RequestInit = {}): Promise<any> {
+    // If we've already determined the session is dead, don't keep trying and looping
+    if (isSessionDead && !url.includes("/auth/login")) {
+        throw new Error("Session expired. Please log in again.");
+    }
+
     const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
 
     if (options.body && !(options.body instanceof FormData) && !headers["Content-Type"]) {
@@ -28,6 +34,8 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
 
     // Token expired — attempt silent refresh once
     if (response.status === 401 && !url.includes("/auth/refresh") && !url.includes("/auth/login")) {
+        if (isSessionDead) throw new Error("Session expired");
+
         if (!isRefreshing) {
             isRefreshing = true;
 
@@ -50,10 +58,11 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
                 onRefreshed(true);
             } catch {
                 isRefreshing = false;
+                isSessionDead = true; // Mark session as dead to stop loops
                 onRefreshed(false);
 
                 if (typeof window !== "undefined") {
-                    localStorage.removeItem("device_id");
+                    // Reset session dead on login page so users can try again
                     window.location.href = "/login";
                 }
                 throw new Error("Session expired. Please log in again.");
