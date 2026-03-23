@@ -1,26 +1,21 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshSubscribers: ((ok: boolean) => void)[] = [];
 
-function subscribeTokenRefresh(cb: (token: string) => void) {
-    refreshSubscribers.push(cb);
-}
-
-function onRefreshed(token: string) {
-    refreshSubscribers.map((cb) => cb(token));
+function onRefreshed(ok: boolean) {
+    refreshSubscribers.forEach((cb) => cb(ok));
     refreshSubscribers = [];
 }
 
+/**
+ * All API calls go through here.
+ * Tokens live in HttpOnly cookies — we never read them from JS.
+ * The browser attaches them automatically via credentials: 'include'.
+ */
 export async function fetcher(url: string, options: RequestInit = {}): Promise<any> {
-    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
 
-    const headers: any = {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...options.headers,
-    };
-
-    // Only set Content-Type if we are sending JSON and it's not already set
     if (options.body && !(options.body instanceof FormData) && !headers["Content-Type"]) {
         headers["Content-Type"] = "application/json";
     }
@@ -28,65 +23,55 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
     const response = await fetch(`${API_URL}${url}`, {
         ...options,
         headers,
+        credentials: "include", // send HttpOnly cookies automatically
     });
 
+    // Token expired — attempt silent refresh once
     if (response.status === 401 && !url.includes("/auth/refresh") && !url.includes("/auth/login")) {
         if (!isRefreshing) {
             isRefreshing = true;
-            try {
-                const refreshToken = localStorage.getItem("refresh_token");
-                const userId = localStorage.getItem("user_id");
-                const deviceId = localStorage.getItem("device_id") || "web-browser";
 
-                if (!refreshToken || !userId) throw new Error("No refresh token available");
+            try {
+                // deviceId is the only non-sensitive value we keep in localStorage
+                const deviceId = typeof window !== "undefined"
+                    ? (localStorage.getItem("device_id") ?? "web-browser")
+                    : "web-browser";
 
                 const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ refreshToken, userId, deviceId }),
+                    credentials: "include",
+                    body: JSON.stringify({ deviceId }),
                 });
 
                 if (!refreshResponse.ok) throw new Error("Refresh failed");
 
-                const refreshData = await refreshResponse.json();
-                const newTokens = refreshData.data.tokens;
-
-                localStorage.setItem("auth_token", newTokens.accessToken);
-                localStorage.setItem("refresh_token", newTokens.refreshToken);
-
-                // Update cookies for server-side middleware
-                document.cookie = `auth_token=${newTokens.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}`;
-
                 isRefreshing = false;
-                onRefreshed(newTokens.accessToken);
-            } catch (err) {
+                onRefreshed(true);
+            } catch {
                 isRefreshing = false;
-                // Clear auth and logout if refresh fails
-                localStorage.removeItem("auth_token");
-                localStorage.removeItem("refresh_token");
-                localStorage.removeItem("user_id");
-                document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+                onRefreshed(false);
 
-                if (typeof window !== "undefined") window.location.href = "/login";
-                throw err;
+                if (typeof window !== "undefined") {
+                    localStorage.removeItem("device_id");
+                    window.location.href = "/login";
+                }
+                throw new Error("Session expired. Please log in again.");
             }
         }
 
-        // Return a promise that waits for the refresh and retries
-        return new Promise((resolve) => {
-            subscribeTokenRefresh((token) => {
-                const newHeaders = {
-                    ...headers,
-                    Authorization: `Bearer ${token}`,
-                };
-                resolve(fetcher(url, { ...options, headers: newHeaders }));
+        // Queue the original request until refresh completes
+        return new Promise((resolve, reject) => {
+            refreshSubscribers.push((ok) => {
+                if (!ok) return reject(new Error("Session expired"));
+                resolve(fetcher(url, options));
             });
         });
     }
 
     if (!response.ok) {
         const errorBody = await response.json().catch(() => ({}));
-        const error = new Error(errorBody.message || "Something went wrong fetching data");
+        const error = new Error(errorBody.message || "Something went wrong");
         (error as any).error = errorBody.error;
         (error as any).data = errorBody.data;
         throw error;
@@ -96,10 +81,12 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
 }
 
 export const api = {
-    get: (url: string, options?: RequestInit) => fetcher(url, { ...options, method: "GET" }),
+    get: (url: string, options?: RequestInit) =>
+        fetcher(url, { ...options, method: "GET" }),
     post: (url: string, body: any, options?: RequestInit) =>
         fetcher(url, { ...options, method: "POST", body: body instanceof FormData ? body : JSON.stringify(body) }),
     put: (url: string, body: any, options?: RequestInit) =>
         fetcher(url, { ...options, method: "PUT", body: body instanceof FormData ? body : JSON.stringify(body) }),
-    delete: (url: string, options?: RequestInit) => fetcher(url, { ...options, method: "DELETE" }),
+    delete: (url: string, options?: RequestInit) =>
+        fetcher(url, { ...options, method: "DELETE" }),
 };

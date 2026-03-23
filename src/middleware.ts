@@ -4,60 +4,40 @@ import type { NextRequest } from "next/server";
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // Get token and role from cookies
-    const token = request.cookies.get("auth_token")?.value;
-    const role = request.cookies.get("user_role")?.value;
+    // Read from the HttpOnly-safe cookies the server sets on login.
+    // access_token is HttpOnly so middleware can read it server-side,
+    // but client JS cannot (XSS protection).
+    // user_role is NOT HttpOnly so Next.js middleware (edge runtime) can route by role.
+    const token = request.cookies.get("access_token")?.value;
+    const role  = request.cookies.get("user_role")?.value;
 
-    // 1. If user is trying to access auth pages (login/signup) and is already logged in,
-    // redirect them to the home page or admin page.
+    // Already logged in → redirect away from login page
     if (pathname.startsWith("/login") && token) {
-        if (role === "ADMIN") {
-            return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-        }
-        return NextResponse.redirect(new URL("/user", request.url));
+        const dest = role === "ADMIN" ? "/admin/dashboard" : "/user";
+        return NextResponse.redirect(new URL(dest, request.url));
     }
 
-    // 2. If user is trying to access PROTECTED admin pages and is NOT an admin,
-    // redirect them to the home page.
+    // Non-admin trying to reach admin pages
     if (pathname.startsWith("/admin") && role !== "ADMIN") {
         return NextResponse.redirect(new URL("/user", request.url));
     }
 
-    // 3. If user is trying to access protected pages and is NOT logged in,
-    // redirect them to the login page.
-    // Exceptions: public files, api routes, icons
-    const isPublicPage = pathname.startsWith("/login") || pathname.includes(".");
-
-    if (!token && !isPublicPage && pathname !== "/") {
+    // Unauthenticated user hitting a protected page
+    const isPublicPath = pathname.startsWith("/login") || pathname.includes(".");
+    if (!token && !isPublicPath && pathname !== "/") {
         return NextResponse.redirect(new URL("/login", request.url));
     }
 
-    // Special case for root: redirect based on login status and role
+    // Root redirect
     if (pathname === "/") {
-        if (!token) {
-            return NextResponse.redirect(new URL("/login", request.url));
-        } else {
-            if (role === "ADMIN") {
-                return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-            } else {
-                return NextResponse.redirect(new URL("/user", request.url));
-            }
-        }
+        if (!token) return NextResponse.redirect(new URL("/login", request.url));
+        const dest = role === "ADMIN" ? "/admin/dashboard" : "/user";
+        return NextResponse.redirect(new URL(dest, request.url));
     }
 
     return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
-    matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - api (API routes)
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         */
-        '/((?!api|_next/static|_next/image|favicon.ico).*)',
-    ],
+    matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

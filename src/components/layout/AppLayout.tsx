@@ -11,13 +11,11 @@ interface NavItem {
 }
 
 import { Search, Bell, Moon, Sun, User, ChevronDown, LogOut } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/providers/AuthProvider";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const router = useRouter();
     const { user } = useAuth();
     const { theme, setTheme, resolvedTheme } = useTheme();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -28,11 +26,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         setMounted(true);
     }, []);
 
-    const handleLogout = () => {
-        // Clear the auth_token cookie
-        document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        router.push("/login");
-    };
+    const { logout } = useAuth();
+    const handleLogout = () => { logout(); };
 
     const toggleTheme = () => {
         setTheme(resolvedTheme === "dark" ? "light" : "dark");

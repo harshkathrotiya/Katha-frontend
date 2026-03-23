@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
@@ -24,41 +23,31 @@ export default function LoginPage() {
             const email = formData.get("email") as string;
             const password = formData.get("password") as string;
 
-            // Get or create a unique device ID for this browser
+            // device_id is non-sensitive — safe in localStorage (no tokens here)
             let deviceId = localStorage.getItem("device_id");
             if (!deviceId) {
                 deviceId = `web-${Math.random().toString(36).substring(2, 15)}-${Date.now().toString(36)}`;
                 localStorage.setItem("device_id", deviceId);
             }
 
-            // Call the login API
             const response = await api.post("/auth/login", {
                 email,
                 password,
                 deviceId,
                 deviceName: "Web Browser",
-                platform: "web"
+                platform: "web",
             });
 
             if (response.success) {
-                const { user, tokens } = response.data;
+                const { user } = response.data;
 
-                // Store tokens and identifiers for refresh logic
-                localStorage.setItem("auth_token", tokens.accessToken);
-                localStorage.setItem("refresh_token", tokens.refreshToken);
-                localStorage.setItem("user_id", user.id);
-                localStorage.setItem("user_role", user.role);
+                // Tokens are set as HttpOnly cookies by the server — never stored here.
+                // Only store non-sensitive display data.
                 localStorage.setItem("user_name", user.name);
                 localStorage.setItem("user_email", user.email);
-                localStorage.setItem("device_id", deviceId);
-
-                // Set cookie for middleware (server-side protection)
-                document.cookie = `auth_token=${tokens.accessToken}; path=/; max-age=${7 * 24 * 60 * 60}`;
-                document.cookie = `user_role=${user.role}; path=/; max-age=${7 * 24 * 60 * 60}`;
 
                 setIsLoading(false);
 
-                // Role-based redirection
                 if (user.role === "ADMIN") {
                     router.push("/admin/dashboard");
                 } else {
@@ -68,21 +57,18 @@ export default function LoginPage() {
         } catch (err: any) {
             console.error("Login failed:", err);
 
-            // Extract detailed validation errors if available
             let errorMessage = err.message || "Invalid credentials or device pending approval";
-            if (err.error?.code === 'VALIDATION_ERROR' && err.error.details) {
-                // Map technical Zod paths to user-friendly field names
+            if (err.error?.code === "VALIDATION_ERROR" && err.error.details) {
                 const fieldMap: Record<string, string> = {
-                    'password': 'Password',
-                    'email': 'Email Address'
+                    password: "Password",
+                    email: "Email Address",
                 };
-
-                const details = err.error.details.map((d: any) => {
-                    const fieldName = fieldMap[d.path[0]] || 'Field';
-                    return d.message.replace(/^String/, fieldName);
-                }).join(". ");
-
-                errorMessage = details;
+                errorMessage = err.error.details
+                    .map((d: any) => {
+                        const fieldName = fieldMap[d.path[0]] || "Field";
+                        return d.message.replace(/^String/, fieldName);
+                    })
+                    .join(". ");
             }
 
             setError(errorMessage);
@@ -92,12 +78,10 @@ export default function LoginPage() {
 
     return (
         <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Small Header Text */}
             <p className="text-[12px] tracking-[1px] text-[#666] mb-[10px] uppercase font-medium">
                 || Jay Swaminarayan ||
             </p>
 
-            {/* Title */}
             <h1 className="text-[28px] text-[#8b1c1c] font-semibold mb-[30px] font-outfit">
                 Satsang Katha
             </h1>
@@ -127,7 +111,6 @@ export default function LoginPage() {
                             required
                             autoComplete="current-password"
                         />
-                        {/* Eye Icon */}
                         <div
                             className="absolute right-[15px] top-1/2 -translate-y-1/2 text-[#999] hover:text-[#666] cursor-pointer transition-colors p-1"
                             onClick={() => setShowPassword(!showPassword)}

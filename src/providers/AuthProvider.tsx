@@ -1,6 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { api, API_URL } from "@/lib/api";
 
 interface User {
     id: string;
@@ -12,7 +13,8 @@ interface User {
 interface AuthContextType {
     user: User | null;
     isLoading: boolean;
-    logout: () => void;
+    logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,60 +23,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => {
-        const checkAuth = async () => {
-            try {
-                const token = localStorage.getItem("auth_token");
-                const role = localStorage.getItem("user_role");
-
-                if (token) {
-                    const name = localStorage.getItem("user_name");
-                    const email = localStorage.getItem("user_email");
-                    
-                    setUser({
-                        id: localStorage.getItem("user_id") || "current",
-                        name: name || "User",
-                        email: email || "user@katha.com",
-                        role: role || "USER"
-                    });
-                }
-                setIsLoading(false);
-            } catch (err) {
-                setIsLoading(false);
+    const fetchProfile = useCallback(async () => {
+        try {
+            // Tokens live in HttpOnly cookies — the browser sends them automatically.
+            // We simply call the profile endpoint; if the cookie is missing/expired
+            // the server returns 401 and api.ts redirects to /login.
+            const response = await api.get("/user/profile");
+            if (response.success && response.data) {
+                setUser({
+                    id: response.data.id,
+                    name: response.data.name,
+                    email: response.data.email,
+                    role: response.data.role,
+                });
+                // Keep display name cached for instant hydration on hard refresh
+                localStorage.setItem("user_name", response.data.name);
+                localStorage.setItem("user_email", response.data.email);
             }
-        };
-        checkAuth();
+        } catch {
+            // 401 means no valid session — leave user as null
+            setUser(null);
+        } finally {
+            setIsLoading(false);
+        }
     }, []);
 
-    const logout = async () => {
+    useEffect(() => {
+        // Optimistic: pre-fill from localStorage so the UI is instant,
+        // then verify with the server in the background.
+        const cachedName = typeof window !== "undefined" ? localStorage.getItem("user_name") : null;
+        const cachedEmail = typeof window !== "undefined" ? localStorage.getItem("user_email") : null;
+        if (cachedName) {
+            setUser({ id: "", name: cachedName, email: cachedEmail ?? "", role: "" });
+        }
+        fetchProfile();
+    }, [fetchProfile]);
+
+    const logout = useCallback(async () => {
         try {
-            const token = localStorage.getItem("auth_token");
-            if (token) {
-                // Fire and forget logout on backend
-                fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api"}/auth/logout`, {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${token}` }
-                }).catch(() => { });
-            }
-        } catch (e) { }
+            // Tells the server to clear the HttpOnly cookies + invalidate refresh token
+            await fetch(`${API_URL}/auth/logout`, {
+                method: "POST",
+                credentials: "include",
+            });
+        } catch {
+            // Best-effort — proceed with client-side cleanup regardless
+        }
 
-        // Clear cookies
-        document.cookie = "auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-        document.cookie = "user_role=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-
-        // Clear storage
-        localStorage.removeItem("auth_token");
-        localStorage.removeItem("refresh_token");
-        localStorage.removeItem("user_role");
-        localStorage.removeItem("user_id");
+        // Clear any cached display data
+        localStorage.removeItem("user_name");
+        localStorage.removeItem("user_email");
         localStorage.removeItem("device_id");
 
         setUser(null);
         window.location.href = "/login";
-    };
+    }, []);
 
     return (
-        <AuthContext.Provider value={{ user, isLoading, logout }}>
+        <AuthContext.Provider value={{ user, isLoading, logout, refreshUser: fetchProfile }}>
             {children}
         </AuthContext.Provider>
     );
