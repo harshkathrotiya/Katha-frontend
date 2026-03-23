@@ -86,8 +86,18 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
     }
 
     if (!response.ok) {
-        const errorBody = await response.json().catch(() => ({}));
-        const error = new Error(errorBody.message || "Something went wrong");
+        const rawBody = await response.text().catch(() => "");
+        let errorBody: any = {};
+        try {
+            if (rawBody) errorBody = JSON.parse(rawBody);
+        } catch {
+            // Use the sliced raw text if not JSON
+            errorBody = { message: rawBody.slice(0, 200) };
+        }
+
+        const errorMessage = errorBody.message || errorBody.error?.message || `Error ${response.status}: Something went wrong`;
+        const error = new Error(errorMessage);
+        (error as any).status = response.status;
         (error as any).error = errorBody.error;
         (error as any).data = errorBody.data;
         throw error;
