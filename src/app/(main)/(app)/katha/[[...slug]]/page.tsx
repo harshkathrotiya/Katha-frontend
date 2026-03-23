@@ -189,6 +189,14 @@ export default function KathaCollectionPage() {
   const [potentialFolders, setPotentialFolders] = useState<any[]>([]);
   const [moveSearch, setMoveSearch] = useState("");
 
+  // Tag Modal States
+  const [isTagModalOpen, setIsTagModalOpen] = useState(false);
+  const [allTags, setAllTags] = useState<any[]>([]);
+  const [tagSearch, setTagSearch] = useState("");
+  const [newTagName, setNewTagName] = useState("");
+  const [newTagColor, setNewTagColor] = useState("#8b1D1D");
+  const [isCreatingTag, setIsCreatingTag] = useState(false);
+
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
     setTimeout(() => setToast({ message: '', type: null }), 3000);
@@ -230,6 +238,7 @@ export default function KathaCollectionPage() {
       if (cached) {
         setMixedContents(cached.contents);
         setFilteredContents(cached.contents);
+        if (slug.length === 0) setKathaList(cached.contents);
         setCurrentFolderId(cached.folderId);
         setLoading(false);
         // Build trie in background
@@ -246,8 +255,15 @@ export default function KathaCollectionPage() {
           const res = await api.get('/folders?section=KATHA');
           const data = (res.data || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfo({ ...f, type: 'folder' }) }));
           setKathaList(data);
+          setMixedContents(data);
+          setFilteredContents(data);
           setCurrentFolderId(null);
           contentCache.set('root', { contents: data, folderId: null });
+
+          // DSA: Initialize Trie for root search
+          const trie = new Trie();
+          data.forEach((it: any) => trie.insert(it.name || it.title || '', it));
+          trieRef.current = trie;
         } else {
           // Optimized: Resolve path and get contents in ONE call
           const resolveRes = await api.post('/folders/resolve-path', {
@@ -486,52 +502,21 @@ export default function KathaCollectionPage() {
       setList(targetList.map(mapper));
       if (!isGallery) setFilteredContents(prev => prev.map(mapper));
 
-      if (newFavStatus) {
-        // Adding to favourites — get or create a default "Katha" collection
-        let foldersRes = await api.get('/favorites');
-        let folders: any[] = foldersRes.data || [];
+      const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
+      const res = await api.post('/favorites/toggle', {
+        itemId: item.id,
+        itemType
+      });
 
-        let defaultFolder = folders.find((f: any) => f.name === 'Katha');
-        if (!defaultFolder) {
-          const createRes = await api.post('/favorites', { name: 'Katha' });
-          defaultFolder = createRes.data;
-        }
-
-        const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
-        try {
-          await api.post('/favorites/items', {
-            favoriteFolderId: defaultFolder.id,
-            itemType,
-            itemId: item.id,
-          });
-          showToast('Added to Favourites ♥', 'success');
-        } catch (err: any) {
-          if (err.message?.includes('already')) {
-            showToast('Already in Favourites', 'info');
-          } else {
-            throw err;
-          }
-        }
-      } else {
-        // Removing — find the item in ALL favourite folders and delete it
-        const foldersRes = await api.get('/favorites');
-        const folders: any[] = foldersRes.data || [];
-
-        let removed = false;
-        for (const folder of folders) {
-          const itemsRes = await api.get(`/favorites/${folder.id}/items`);
-          const favItems: any[] = itemsRes.data || [];
-          const match = favItems.find((fi: any) =>
-            (item.type === 'file' ? fi.file?.id : fi.folder?.id) === item.id
-          );
-          if (match) {
-            await api.delete(`/favorites/items/${match.id}`);
-            removed = true;
-            break;
-          }
-        }
-        showToast(removed ? 'Removed from Favourites' : 'Not in any Favourite collection', removed ? 'success' : 'info');
+      const { favorited } = res.data;
+      showToast(favorited ? 'Added to Favourites ♥' : 'Removed from Favourites', favorited ? 'success' : 'info');
+      
+      // Update with exact status from server (in case of race conditions)
+      if (favorited !== newFavStatus) {
+         setList(targetList.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
+         if (!isGallery) setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
       }
+
     } catch (err: any) {
       // Rollback optimistic update on real error
       const isGallery = slug.length === 0;
@@ -792,6 +777,7 @@ export default function KathaCollectionPage() {
     const mapper = (it: any) => it.id === item.id ? { ...it, isPinned: newPinnedStatus } : it;
 
     // Optimistic Update
+    setKathaList(prev => prev.map(mapper));
     setMixedContents(prev => prev.map(mapper));
     setFilteredContents(prev => prev.map(mapper));
 
@@ -801,11 +787,71 @@ export default function KathaCollectionPage() {
       contentCache.delete(slug.join('/') || 'root');
       showToast(newPinnedStatus ? "Pinned to top" : "Removed from top", "success");
     } catch (err) {
-      // Rollback on error
-      const rollbackMapper = (it: any) => it.id === item.id ? { ...it, isPinned: !newPinnedStatus } : it;
-      setMixedContents(prev => prev.map(rollbackMapper));
-      setFilteredContents(prev => prev.map(rollbackMapper));
-      showToast("Failed to pin item", "error");
+      setKathaList(prev => prev.map(it => it.id === item.id ? { ...it, isPinned: item.isPinned } : it));
+      setMixedContents(prev => prev.map(it => it.id === item.id ? { ...it, isPinned: item.isPinned } : it));
+      setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isPinned: item.isPinned } : it));
+      showToast("Failed to update pin status", "error");
+    }
+  };
+
+  const handleOpenTagModal = async (item: any) => {
+    setActiveItem(item);
+    setIsTagModalOpen(true);
+    try {
+      const res = await api.get('/tags');
+      setAllTags(res.data || []);
+    } catch (err) {
+      console.error("Failed to fetch tags");
+    }
+  };
+
+  const handleToggleTag = async (tag: any) => {
+    if (!activeItem) return;
+    const hasTag = activeItem.tags?.some((t: any) => t.id === tag.id);
+    const itemType = activeItem.type === 'file' ? 'FILE' : 'FOLDER';
+
+    try {
+      if (hasTag) {
+        if (itemType === 'FILE') await api.delete(`/tags/file/${tag.id}/${activeItem.id}`);
+        else await api.delete(`/tags/folder/${tag.id}/${activeItem.id}`);
+      } else {
+        if (itemType === 'FILE') await api.post('/tags/file', { tagId: tag.id, fileId: activeItem.id });
+        else await api.post('/tags/folder', { tagId: tag.id, folderId: activeItem.id });
+      }
+
+      // Update local state
+      const updateTags = (itemTags: any[]) => {
+        if (hasTag) return itemTags.filter((t: any) => t.id !== tag.id);
+        return [...(itemTags || []), tag];
+      };
+
+      const mapper = (it: any) => it.id === activeItem.id ? { ...it, tags: updateTags(it.tags) } : it;
+      
+      const isGallery = slug.length === 0;
+      if (isGallery) setKathaList(prev => prev.map(mapper));
+      else {
+        setMixedContents(prev => prev.map(mapper));
+        setFilteredContents(prev => prev.map(mapper));
+      }
+      
+      setActiveItem((prev: any) => ({ ...prev, tags: updateTags(prev.tags) }));
+      showToast(hasTag ? "Tag removed" : "Tag added", "success");
+    } catch (err) {
+      showToast("Failed to update tag", "error");
+    }
+  };
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) return;
+    try {
+      const res = await api.post('/tags', { name: newTagName, color: newTagColor });
+      const newTag = res.data;
+      setAllTags(prev => [...prev, newTag]);
+      setNewTagName("");
+      setIsCreatingTag(false);
+      handleToggleTag(newTag);
+    } catch (err) {
+      showToast("Failed to create tag", "error");
     }
   };
 
@@ -969,7 +1015,7 @@ export default function KathaCollectionPage() {
                     key={item.id}
                     index={idx + 1}
                     item={item}
-                    onTag={() => showToast('Tag feature active!', 'success')}
+                    onTag={() => handleOpenTagModal(item)}
                     onFav={() => handeToggleFav(item)}
                     onPin={() => handleTogglePin(item)}
                     onDownload={() => {
@@ -1010,34 +1056,64 @@ export default function KathaCollectionPage() {
         </div>
       ) : (
         <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col relative pb-32 w-full">
-          <div className="px-5 md:px-10 py-3 md:py-4 flex items-center justify-between border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl z-40 w-full shadow-sm">
-            <div className="flex items-center gap-3 md:gap-4">
+          <div className="px-5 md:px-10 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl z-40 w-full shadow-sm">
+            <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
               <button
                 onClick={() => router.push("/user")}
-                className="p-1.5 md:px-3 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-[#8b1D1D] transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 flex items-center gap-2"
+                className="p-1.5 md:px-3 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 flex items-center gap-2"
               >
                 <LayoutDashboard size={14} />
                 <span className="hidden md:inline">Dashboard</span>
               </button>
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-maroon/5 flex items-center justify-center rounded-lg md:rounded-xl border border-maroon/10 text-maroon">
-                <Library className="w-4 h-4 md:w-5 md:h-5" />
+              <button
+                onClick={() => router.push("/favorites")}
+                className="p-1.5 md:px-3 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 flex items-center gap-2"
+              >
+                <Heart size={14} />
+                <span className="hidden md:inline">Favorites</span>
+              </button>
+              <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1 shrink-0 hidden sm:block" />
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-maroon/5 flex items-center justify-center rounded-lg md:rounded-xl border border-maroon/10 text-maroon">
+                  <Library className="w-4 h-4 md:w-5 md:h-5" />
+                </div>
+                <h1 className="text-lg md:text-xl font-black text-slate-900 dark:text-white font-outfit tracking-tighter uppercase leading-none hidden sm:block">Gallery</h1>
               </div>
-              <h1 className="text-lg md:text-2xl font-black text-slate-900 dark:text-white font-outfit tracking-tighter uppercase leading-none">Katha Gallery</h1>
             </div>
 
-            <button
-              onClick={() => openInputModal('create_collection')}
-              className="flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-maroon hover:bg-[#6e171b] text-white rounded-xl font-black uppercase tracking-widest text-[8px] md:text-[10px] shadow-lg shadow-maroon/20 hover:-translate-y-0.5 transition-all"
-            >
-              <Plus size={16} strokeWidth={3} />
-              <span>New Collection</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+              <div className="relative flex-1 sm:flex-none sm:w-60 group">
+                <Input
+                  placeholder="Seach Collections..."
+                  value={moveSearch}
+                  onChange={(e) => setMoveSearch(e.target.value)}
+                  className="pl-9 h-9 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[8px] md:text-[9px]"
+                />
+                <Eye size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />
+              </div>
+
+              <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-xl items-center gap-0.5 border border-slate-200 dark:border-slate-800 shrink-0">
+                <button onClick={() => setSortBy('name')} className={`px-2.5 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Name</button>
+                <button onClick={() => setSortBy('date')} className={`px-2.5 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'date' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Date</button>
+                <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1.5 text-slate-400 hover:text-maroon transition-colors">
+                  {sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
+                </button>
+              </div>
+
+              <button
+                onClick={() => openInputModal('create_collection')}
+                className="flex items-center gap-2 px-4 md:px-5 py-2.5 bg-maroon hover:bg-[#6e171b] text-white rounded-xl font-black uppercase tracking-widest text-[8px] md:text-[10px] shadow-lg shadow-maroon/20 hover:-translate-y-0.5 transition-all"
+              >
+                <Plus size={16} strokeWidth={3} />
+                <span>New Collection</span>
+              </button>
+            </div>
           </div>
 
           <div className="px-5 md:px-10 py-6 md:py-10 max-w-[1700px] mx-auto w-full">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
-              {kathaList.map((item, idx) => (
+              {getSortedItems(filteredContents).map((item, idx) => (
                 <KathaCard
                   key={item.id}
                   item={item}
@@ -1051,6 +1127,8 @@ export default function KathaCollectionPage() {
                   onMoveDown={() => handleReorder(item, 'down')}
                   onMove={() => handleOpenMoveModal({ ...item, type: 'folder' })}
                   onToggleFav={() => handeToggleFav(item)}
+                  onTag={() => handleOpenTagModal({ ...item, type: 'folder' })}
+                  onPin={() => handleTogglePin({ ...item, type: 'folder' })}
                 />
               ))}
             </div>
@@ -1306,6 +1384,64 @@ export default function KathaCollectionPage() {
           </div>
         </div>
       )}
+
+      {/* Tag Modal */}
+      <Modal isOpen={isTagModalOpen} onClose={() => setIsTagModalOpen(false)} title={`Tags for ${activeItem?.name || activeItem?.title || 'Item'}`}
+        footer={<div className="flex gap-2 w-full">
+          <Button variant="outline" onClick={() => setIsTagModalOpen(false)} className="flex-1 rounded-xl">Close</Button>
+        </div>}
+      >
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input 
+              placeholder="Search or create tag" 
+              value={tagSearch} 
+              onChange={(e) => setTagSearch(e.target.value)}
+              className="flex-1 rounded-xl border-slate-200 dark:border-slate-800"
+            />
+            {tagSearch && !allTags.some(t => t.name.toLowerCase() === tagSearch.toLowerCase()) && (
+              <Button onClick={() => { setNewTagName(tagSearch); setIsCreatingTag(true); }} className="bg-maroon hover:bg-[#6e171b] text-white rounded-xl text-[10px] font-black uppercase shrink-0">
+                New
+              </Button>
+            )}
+          </div>
+
+          {isCreatingTag && (
+             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="flex items-center justify-between">
+                   <span className="text-[10px] font-black uppercase text-slate-400">Tag Preview</span>
+                   <button onClick={() => setIsCreatingTag(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14}/></button>
+                </div>
+                <div className="flex items-center gap-3">
+                   <div className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm" style={{ backgroundColor: `${newTagColor}20`, color: newTagColor, border: `1px solid ${newTagColor}40` }}>
+                      {newTagName || 'New Tag'}
+                   </div>
+                   <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent" />
+                </div>
+                <Button onClick={handleCreateTag} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest">Create & Apply</Button>
+             </div>
+          )}
+
+          <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            {allTags.filter(t => t.name.toLowerCase().includes(tagSearch.toLowerCase())).map(tag => {
+              const isActive = activeItem?.tags?.some((t: any) => t.id === tag.id);
+              return (
+                <div
+                  key={tag.id}
+                  onClick={() => handleToggleTag(tag)}
+                  className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${isActive ? 'border-maroon bg-maroon/5 ring-1 ring-maroon/20' : 'border-slate-50 hover:border-slate-100 dark:hover:border-slate-800'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
+                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight text-xs">{tag.name}</span>
+                  </div>
+                  {isActive && <CheckCircle size={16} className="text-maroon" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Modal>
 
       {/* User Modal */}
       <Modal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} title="Share Workspace"

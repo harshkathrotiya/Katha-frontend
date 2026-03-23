@@ -28,6 +28,8 @@ export const KathaCard = ({
   onMoveUp,
   onMoveDown,
   onToggleFav,
+  onTag,
+  onPin,
   onMove
 }: {
   item: any;
@@ -38,22 +40,25 @@ export const KathaCard = ({
   onMoveDown: () => void;
   onMove: () => void;
   onToggleFav: () => void;
+  onTag: () => void;
+  onPin: () => void;
 }) => {
   const [isMobileExposed, setIsMobileExposed] = React.useState(false);
   const title = item.name;
   const date = new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
   const isFav = item.isFav;
+  const isPinned = item.isPinned;
 
   const actions = [
     { Icon: Heart, label: "Bookmark", onClick: onToggleFav, bg: isFav ? "bg-maroon text-white" : "bg-amber-100 dark:bg-amber-900/40", text: isFav ? "text-white" : "text-amber-700 dark:text-amber-300" },
     { Icon: Trash2, label: "Delete", onClick: onDelete, bg: "bg-red-50 dark:bg-red-950/30", text: "text-red-600 dark:text-red-400" },
-    { Icon: Tag, label: "Tag", onClick: () => { }, bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300" },
+    { Icon: Tag, label: "Tag", onClick: onTag, bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300" },
     {
       Icon: Copy, label: "Copy link", onClick: () => {
         navigator.clipboard.writeText(window.location.origin + `/katha/${item.name}`);
       }, bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300"
     },
-    { Icon: Pin, label: "Pin", onClick: () => { }, bg: "bg-slate-100 dark:bg-slate-800", text: "text-slate-700 dark:text-slate-200" },
+    { Icon: Pin, label: isPinned ? "Unpin" : "Pin", onClick: onPin, bg: isPinned ? "bg-maroon text-white" : "bg-slate-100 dark:bg-slate-800", text: isPinned ? "text-white" : "text-slate-700 dark:text-slate-200" },
     { Icon: Download, label: "Download", onClick: () => { }, bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300" },
     {
       Icon: Share2, label: "Share", onClick: () => {
@@ -141,8 +146,31 @@ export const KathaCard = ({
         </div>
       </div>
 
+      <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
+         {item.isPinned && (
+           <div className="w-8 h-8 md:w-10 md:h-10 bg-maroon text-white rounded-xl flex items-center justify-center shadow-lg shadow-maroon/20 animate-in zoom-in-50 duration-300">
+             <Pin className="w-4 h-4 md:w-5 md:h-5 fill-white" />
+           </div>
+         )}
+      </div>
+
       <div className="px-0.5 mt-auto">
         <h3 className="font-outfit font-black text-slate-900 dark:text-white text-lg md:text-xl tracking-tighter leading-tight group-hover:text-[#8b1D1D] transition-colors truncate">{title}</h3>
+        
+        {item.tags && item.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {item.tags.map((tag: any) => (
+              <span 
+                key={tag.id} 
+                className="text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
+              >
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mt-1 md:mt-2">
           <span className="text-[8px] md:text-[9px] font-bold text-slate-400 dark:text-slate-500 tracking-wide uppercase">{item.info}</span>
           <div className="w-0.5 h-0.5 rounded-full bg-slate-300" />

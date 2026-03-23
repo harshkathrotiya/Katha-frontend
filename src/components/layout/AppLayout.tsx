@@ -73,10 +73,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         </div>
                         <Link
                             href="/favorites"
-                            className="relative p-2 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-colors group"
+                            className="relative flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 group"
                             title="Favourites"
                         >
-                            <Heart className="h-4 w-4 md:h-5 md:w-5 text-slate-400 group-hover:text-[#8b1D1D] transition-colors" />
+                            <Heart size={14} className="text-slate-400 group-hover:text-maroon transition-colors" />
+                            <span className="hidden md:inline">Favourites</span>
                         </Link>
                     </div>
 

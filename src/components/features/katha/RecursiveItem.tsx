@@ -79,6 +79,19 @@ export const RecursiveItem = ({
             </h4>
           </div>
           <p className="text-[10px] md:text-sm text-slate-400 font-medium italic truncate">{info}</p>
+          {item.tags && item.tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {item.tags.map((tag: any) => (
+                <span 
+                  key={tag.id} 
+                  className="text-[7px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
+                  style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
+                >
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="lg:hidden">
