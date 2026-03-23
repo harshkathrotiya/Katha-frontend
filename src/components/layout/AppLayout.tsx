@@ -10,7 +10,7 @@ interface NavItem {
     icon: React.ReactNode;
 }
 
-import { Search, Bell, Moon, Sun, User, ChevronDown, LogOut } from "lucide-react";
+import { Search, Bell, Moon, Sun, User, ChevronDown, LogOut, Heart } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -71,6 +71,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                                 <span className="absolute top-2 right-2 h-2 w-2 bg-[#8b1D1D] rounded-full border-2 border-white"></span>
                             </button>
                         </div>
+                        <Link
+                            href="/favorites"
+                            className="relative p-2 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-colors group"
+                            title="Favourites"
+                        >
+                            <Heart className="h-4 w-4 md:h-5 md:w-5 text-slate-400 group-hover:text-[#8b1D1D] transition-colors" />
+                        </Link>
                     </div>
 
                     <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l border-slate-100 dark:border-slate-800 relative">

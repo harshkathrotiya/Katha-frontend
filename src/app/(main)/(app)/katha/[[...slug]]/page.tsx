@@ -475,29 +475,72 @@ export default function KathaCollectionPage() {
   };
 
   const handeToggleFav = async (item: any) => {
-    // Simulated toggle logic using metadata for files. For folders, we'd need a backend field.
     try {
       const isGallery = slug.length === 0;
       const setList = isGallery ? setKathaList : setMixedContents;
       const targetList = isGallery ? kathaList : mixedContents;
-
       const newFavStatus = !item.isFav;
 
-      // Optimistic update
+      // Optimistic UI update
       const mapper = (it: any) => it.id === item.id ? { ...it, isFav: newFavStatus } : it;
       setList(targetList.map(mapper));
       if (!isGallery) setFilteredContents(prev => prev.map(mapper));
 
-      if (item.type === 'file') {
-        const meta = JSON.parse(item.metadata || '{}');
-        meta.isFav = newFavStatus;
-        await api.put(`/files/${item.id}`, { metadata: JSON.stringify(meta) });
+      if (newFavStatus) {
+        // Adding to favourites — get or create a default "Katha" collection
+        let foldersRes = await api.get('/favorites');
+        let folders: any[] = foldersRes.data || [];
+
+        let defaultFolder = folders.find((f: any) => f.name === 'Katha');
+        if (!defaultFolder) {
+          const createRes = await api.post('/favorites', { name: 'Katha' });
+          defaultFolder = createRes.data;
+        }
+
+        const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
+        try {
+          await api.post('/favorites/items', {
+            favoriteFolderId: defaultFolder.id,
+            itemType,
+            itemId: item.id,
+          });
+          showToast('Added to Favourites ♥', 'success');
+        } catch (err: any) {
+          if (err.message?.includes('already')) {
+            showToast('Already in Favourites', 'info');
+          } else {
+            throw err;
+          }
+        }
       } else {
-        // For folders, we'll just keep it in state or wait for backend support
-        showToast(newFavStatus ? "Added to Favourites" : "Removed from Favourites", "success");
+        // Removing — find the item in ALL favourite folders and delete it
+        const foldersRes = await api.get('/favorites');
+        const folders: any[] = foldersRes.data || [];
+
+        let removed = false;
+        for (const folder of folders) {
+          const itemsRes = await api.get(`/favorites/${folder.id}/items`);
+          const favItems: any[] = itemsRes.data || [];
+          const match = favItems.find((fi: any) =>
+            (item.type === 'file' ? fi.file?.id : fi.folder?.id) === item.id
+          );
+          if (match) {
+            await api.delete(`/favorites/items/${match.id}`);
+            removed = true;
+            break;
+          }
+        }
+        showToast(removed ? 'Removed from Favourites' : 'Not in any Favourite collection', removed ? 'success' : 'info');
       }
-    } catch (err) {
-      showToast("Failed to update Favourite status", "error");
+    } catch (err: any) {
+      // Rollback optimistic update on real error
+      const isGallery = slug.length === 0;
+      const setList = isGallery ? setKathaList : setMixedContents;
+      const targetList = isGallery ? kathaList : mixedContents;
+      const rollback = (it: any) => it.id === item.id ? { ...it, isFav: item.isFav } : it;
+      setList(targetList.map(rollback));
+      if (!isGallery) setFilteredContents(prev => prev.map(rollback));
+      showToast(err.message || 'Failed to update Favourites', 'error');
     }
   };
 
