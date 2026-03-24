@@ -49,7 +49,8 @@ interface FavItem {
     id: string; 
     name: string; 
     section: string; 
-    parentFolderId: string | null; 
+    parentFolderId: string | null;
+    path: string;
     parent?: { id: string; name: string } | null 
   } | null;
 }
