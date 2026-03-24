@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
+import localforage from "localforage";
 import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
@@ -190,36 +191,44 @@ export default function KathaEditor({
 
   // ── Setup Chapters ────────────────────────────────────────────────────────
   useEffect(() => {
-    let data;
-    if (typeof window !== "undefined") {
-      try {
-        const draft = localStorage.getItem(`katha-draft-${fileId}`);
-        if (draft) data = JSON.parse(draft);
-      } catch (e) { console.error("Cache error", e); }
-    }
-
-    if (!data && initialContent && initialContent !== "<p><br></p>" && initialContent.trim()) {
-      if (contentFormat === "json") {
-        try { data = typeof initialContent === "string" ? JSON.parse(initialContent) : initialContent; }
-        catch (e) { console.error("Parse error:", e); }
+    let unmounted = false;
+    
+    const initData = async () => {
+      let data;
+      if (typeof window !== "undefined") {
+        try {
+          const draft = await localforage.getItem<string>(`katha-draft-${fileId}`);
+          if (draft) data = JSON.parse(draft);
+        } catch (e) { console.error("IDB Cache error", e); }
       }
-    }
 
-    if (!data) {
-      const c = { id: Math.random().toString(36).slice(2), title: "Chapter 1", content: { type: "doc", content: [] } };
-      setChapters([c]);
-      setActiveChapterId(c.id);
-      return;
-    }
+      if (unmounted) return;
 
-    if (data.isChaptered && data.chapters) {
-      setChapters(data.chapters);
-      setActiveChapterId(data.chapters[0]?.id);
-    } else {
-      const c = { id: Math.random().toString(36).slice(2), title: "Chapter 1", content: data };
-      setChapters([c]);
-      setActiveChapterId(c.id);
-    }
+      if (!data && initialContent && initialContent !== "<p><br></p>" && initialContent.trim()) {
+        if (contentFormat === "json") {
+          try { data = typeof initialContent === "string" ? JSON.parse(initialContent) : initialContent; }
+          catch (e) { console.error("Parse error:", e); }
+        }
+      }
+
+      if (!data) {
+        const c = { id: Math.random().toString(36).slice(2), title: "Chapter 1", content: { type: "doc", content: [] } };
+        setChapters([c]);
+        setActiveChapterId(c.id);
+        return;
+      }
+
+      if (data.isChaptered && data.chapters) {
+        setChapters(data.chapters);
+        setActiveChapterId(data.chapters[0]?.id);
+      } else {
+        const c = { id: Math.random().toString(36).slice(2), title: "Chapter 1", content: data };
+        setChapters([c]);
+        setActiveChapterId(c.id);
+      }
+    };
+    initData();
+    return () => { unmounted = true; };
   }, [fileId, initialContent, contentFormat]);
 
   // ── Build extensions once ─────────────────────────────────────────────────
@@ -266,9 +275,9 @@ export default function KathaEditor({
       setChapters(newChapters);
       const saveData = { isChaptered: true, chapters: newChapters };
 
-      // Instant Offline Draft protection
+      // Instant Offline Draft protection via IndexedDB (handles gigabytes of data)
       if (typeof window !== "undefined") {
-        localStorage.setItem(`katha-draft-${fileId}`, JSON.stringify(saveData));
+        localforage.setItem(`katha-draft-${fileId}`, JSON.stringify(saveData)).catch(e=>console.error('IDB AutoSave Error', e));
       }
 
       if(saveTimer.current) clearTimeout(saveTimer.current);
@@ -362,7 +371,7 @@ export default function KathaEditor({
       await onSave(s,"json",txt); // txt is current chapter plain text
       lastSaved.current=s;
       setSaveStatus("saved");
-      if (typeof window !== "undefined") localStorage.removeItem(`katha-draft-${fileId}`);
+      if (typeof window !== "undefined") localforage.removeItem(`katha-draft-${fileId}`).catch(console.error);
     }
     catch{setSaveStatus("error");}
   },[onSave, fileId]);
@@ -377,7 +386,7 @@ export default function KathaEditor({
       await onSave(s,"json",editor.getText());
       lastSaved.current=s;
       setSaveStatus("saved");
-      if (typeof window !== "undefined") localStorage.removeItem(`katha-draft-${fileId}`);
+      if (typeof window !== "undefined") localforage.removeItem(`katha-draft-${fileId}`).catch(console.error);
     }catch{setSaveStatus("error");}
   },[editor, onSave, fileId]);
 
