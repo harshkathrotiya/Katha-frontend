@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import "react-quill-new/dist/quill.snow.css";
 import {
   Home,
   Download,
@@ -51,7 +50,7 @@ import { RecursiveItem } from "@/components/features/katha/RecursiveItem";
 import { MoveSidebarItem } from "@/components/features/katha/MoveSidebarItem";
 import { MiniAction } from "@/components/features/katha/MiniAction";
 
-const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
+const KathaEditor = dynamic(() => import("@/components/editor/KathaEditor"), { ssr: false });
 
 // 🔹 DSA: Trie (Prefix Tree) for lightning fast search
 class TrieNode {
@@ -190,6 +189,7 @@ export default function BookCollectionPage() {
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editorContent, setEditorContent] = useState("");
+  const [editorFormat, setEditorFormat] = useState<"html" | "json">("html");
   const [editingFile, setEditingFile] = useState<any>(null);
 
   // Move Modal States
@@ -797,16 +797,19 @@ export default function BookCollectionPage() {
     }
   };
 
-  const handleSaveFile = async () => {
+  const handleSaveFile = async (content: string, format: "json" | "html" = "html", plainText: string = "") => {
     if (!editingFile) return;
     try {
+      const metadataObj = format === "json"
+        ? { prosemirror: content, plainText, format: "json" }
+        : { content, format: "html" };
+
       const res = await api.put(`/files/${editingFile.id}`, {
-        metadata: JSON.stringify({ content: editorContent })
+        metadata: JSON.stringify(metadataObj)
       });
       const updated = res.data?.data || res.data;
-      showToast("Changes saved", "success");
-      // DSA: DLL push new state
-      historyRef.current?.push(editorContent);
+      showToast("Saved", "success");
+      historyRef.current?.push(content);
 
       const updateMapper = (item: any) => {
         if (item.id === editingFile.id) {
@@ -817,10 +820,10 @@ export default function BookCollectionPage() {
       };
       setMixedContents(prev => prev.map(updateMapper));
       setFilteredContents(prev => prev.map(updateMapper));
-      // Invalidate cache
       contentCache.delete(slug.join('/') || 'root');
     } catch (err) {
       showToast("Failed to save", "error");
+      throw err;
     }
   };
 
@@ -1377,48 +1380,20 @@ export default function BookCollectionPage() {
         </div>
       </Modal>
 
-      {/* Editor Modal */}
-      {isEditorOpen && (
-        <div className="fixed inset-0 z-[100] bg-white dark:bg-slate-950 flex flex-col animate-in fade-in slide-in-from-bottom-5 duration-500 md:duration-300">
-          <div className="px-5 md:px-8 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900/50 backdrop-blur-md sticky top-0">
-            <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
-              <button
-                onClick={() => setIsEditorOpen(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-all shrink-0"
-              >
-                <ArrowLeft size={20} className="text-slate-500" />
-              </button>
-              <div className="truncate">
-                <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight truncate max-w-[150px] md:max-w-md">{editingFile?.name || editingFile?.title}</h3>
-                <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-widest">Editor • Rich Text</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 md:gap-3 shrink-0">
-              <div className="flex items-center gap-1 border-r border-slate-200 dark:border-slate-800 pr-3 mr-1">
-                <button
-                  onClick={() => handleUndoRedo('undo')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all flex items-center gap-1 group"
-                >
-                  <ChevronLeft size={18} className="group-active:-translate-x-1 transition-transform" />
-                  <span className="text-[8px] font-black uppercase tracking-widest hidden sm:inline">Undo</span>
-                </button>
-                <button
-                  onClick={() => handleUndoRedo('redo')}
-                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 transition-all flex items-center gap-1 group"
-                >
-                  <span className="text-[8px] font-black uppercase tracking-widest hidden sm:inline">Redo</span>
-                  <ChevronRight size={18} className="group-active:translate-x-1 transition-transform" />
-                </button>
-              </div>
-              <Button onClick={handleSaveFile} className="bg-[#8b1D1D] hover:bg-[#6e171b] shadow-lg shadow-[#8b1D1D]/20 rounded-xl px-4 md:px-6 text-white py-2.5 md:py-3 font-black uppercase text-[10px] md:text-xs tracking-widest">Update</Button>
-            </div>
-          </div>
-          <div className="flex-1 overflow-hidden p-3 md:p-6 bg-slate-50 dark:bg-slate-950">
-            <div className="max-w-5xl mx-auto h-full bg-white dark:bg-slate-900 shadow-2xl border border-slate-200 dark:border-slate-800 rounded-[30px] md:rounded-[40px] overflow-hidden flex flex-col">
-              <ReactQuill theme="snow" value={editorContent} onChange={(val) => setEditorContent(val)} className="flex-1 h-full overflow-y-auto ql-editor-premium" />
-            </div>
-          </div>
-        </div>
+      {/* Enterprise Editor */}
+      {isEditorOpen && editingFile && (
+        <KathaEditor
+          fileId={editingFile.id}
+          fileName={editingFile.name || editingFile.title || "Untitled"}
+          initialContent={editorContent}
+          contentFormat={editorFormat}
+          onSave={handleSaveFile}
+          onClose={() => {
+            setIsEditorOpen(false);
+            setEditingFile(null);
+            setEditorContent("");
+          }}
+        />
       )}
 
       {/* Confirm Delete Modal */}
