@@ -2,169 +2,197 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-
-interface NavItem {
-    label: string;
-    href: string;
-    icon: React.ReactNode;
-}
-
-import { Search, Bell, Moon, Sun, User, ChevronDown, LogOut, Heart } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import {
+  Moon, Sun, User, ChevronDown, LogOut, Heart,
+  BookOpen, Library, Book, ScrollText, LayoutDashboard, X, Menu
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/providers/AuthProvider";
 
+// Primary nav sections
+const NAV_SECTIONS = [
+  { href: "/user",   label: "Dashboard", icon: LayoutDashboard },
+  { href: "/katha",  label: "Katha",     icon: ScrollText },
+  { href: "/granth", label: "Granth",    icon: Library },
+  { href: "/book",   label: "Books",     icon: Book },
+];
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-    const pathname = usePathname();
-    const { user } = useAuth();
-    const { theme, setTheme, resolvedTheme } = useTheme();
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
+  const { setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Avoid hydration mismatch
-    React.useEffect(() => {
-        setMounted(true);
-    }, []);
+  React.useEffect(() => { setMounted(true); }, []);
 
-    const { logout } = useAuth();
-    const handleLogout = () => { logout(); };
+  const isActive = (href: string) =>
+    href === "/user" ? pathname === "/user" : pathname.startsWith(href);
 
-    const toggleTheme = () => {
-        setTheme(resolvedTheme === "dark" ? "light" : "dark");
-    };
+  const isDark = mounted && resolvedTheme === "dark";
 
-    return (
-        <div className="min-h-screen bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-300">
-            {/* Header */}
-            <header className="h-16 md:h-20 flex items-center justify-between px-4 md:px-8 bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50 transition-colors">
-                <div className="flex items-center gap-2">
-                    <span className="text-lg md:text-2xl font-bold text-[#8b1D1D] dark:text-[#a32b2b] font-outfit whitespace-nowrap">
-                        Satsang Katha SGVP
-                    </span>
-                </div>
+  return (
+    <div className="min-h-screen bg-white dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-300">
 
-                <div className="flex items-center gap-2 md:gap-6">
-                    {/* Search Bar - Desktop Only */}
-                    <div className="relative hidden lg:block">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder=""
-                            className="w-48 xl:w-64 h-10 pl-10 pr-4 bg-[#F8F9FA] dark:bg-slate-900 border-none rounded-full text-sm focus:ring-1 focus:ring-maroon/20 outline-none dark:text-slate-200"
-                        />
-                    </div>
+      {/* ── Top Nav ── */}
+      <header className="h-14 md:h-16 flex items-center justify-between px-4 md:px-6 bg-white dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 sticky top-0 z-50">
 
-                    <div className="flex items-center gap-1 md:gap-4 text-slate-400">
-                        <button
-                            className="p-2 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full transition-colors"
-                            onClick={toggleTheme}
-                        >
-                            {mounted && resolvedTheme === "dark" ? (
-                                <Sun className="h-4 w-4 md:h-5 md:w-5 text-amber-400" />
-                            ) : (
-                                <Moon className="h-4 w-4 md:h-5 md:w-5" />
-                            )}
-                        </button>
-                        <div className="relative hidden sm:block">
-                            <button className="p-2 hover:bg-slate-50 rounded-full transition-colors">
-                                <Bell className="h-5 w-5" />
-                                <span className="absolute top-2 right-2 h-2 w-2 bg-[#8b1D1D] rounded-full border-2 border-white"></span>
-                            </button>
-                        </div>
-                        <Link
-                            href="/favorites"
-                            className="relative flex items-center gap-2 px-3 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 group"
-                            title="Favourites"
-                        >
-                            <Heart size={14} className="text-slate-400 group-hover:text-maroon transition-colors" />
-                            <span className="hidden md:inline">Favourites</span>
-                        </Link>
-                    </div>
+        {/* Left: Logo + Section Nav */}
+        <div className="flex items-center gap-0">
+          {/* Logo */}
+          <Link href="/user" className="flex items-center gap-2 mr-4 md:mr-6">
+            <div className="w-7 h-7 bg-maroon rounded-lg flex items-center justify-center">
+              <BookOpen size={14} className="text-white" />
+            </div>
+            <span className="text-base font-black text-[#8b1D1D] dark:text-[#c0403a] font-outfit tracking-tight whitespace-nowrap hidden sm:block">
+              Satsang Katha
+            </span>
+          </Link>
 
-                    <div className="flex items-center gap-2 md:gap-3 pl-2 md:pl-4 border-l border-slate-100 dark:border-slate-800 relative">
-                        <div
-                            className="flex items-center gap-2 px-1.5 md:px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full cursor-pointer transition-colors group"
-                            onClick={() => setIsProfileOpen(!isProfileOpen)}
-                        >
-                            <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700">
-                                <User className="h-3.5 w-3.5 md:h-4 md:w-4 text-slate-600 dark:text-slate-400" />
-                            </div>
-                            <span className="text-xs md:text-sm font-semibold text-slate-700 dark:text-slate-300 hidden sm:block">
-                                {user?.name || "User"}
-                            </span>
-                            <ChevronDown className={`h-3.5 w-3.5 md:h-4 md:w-4 text-slate-400 group-hover:text-slate-600 transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
-                        </div>
-
-                        {/* Dropdown Menu */}
-                        {isProfileOpen && (
-                            <div className="absolute right-0 top-full mt-2 w-40 md:w-48 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
-                                <button
-                                    onClick={handleLogout}
-                                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-[#8b1D1D] transition-colors"
-                                >
-                                    <LogOut className="h-4 w-4" />
-                                    <span>Logout</span>
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </header>
-
-            {/* Main Content Area */}
-            <main className="flex-1 relative flex flex-col">
-                {children}
-            </main>
+          {/* Section tabs – desktop */}
+          <nav className="hidden md:flex items-center gap-0.5">
+            {NAV_SECTIONS.map(({ href, label, icon: Icon }) => (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200
+                  ${isActive(href)
+                    ? "bg-maroon/8 text-maroon dark:text-[#c0403a] border border-maroon/15"
+                    : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900"
+                  }`}
+              >
+                <Icon size={13} strokeWidth={2.5} />
+                <span>{label}</span>
+              </Link>
+            ))}
+          </nav>
         </div>
-    );
+
+        {/* Right: actions */}
+        <div className="flex items-center gap-1 md:gap-2">
+
+          {/* Favourites pill */}
+          <Link
+            href="/favorites"
+            className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all duration-200
+              ${isActive("/favorites")
+                ? "bg-maroon text-white shadow-lg shadow-maroon/20"
+                : "text-slate-500 dark:text-slate-400 hover:text-maroon hover:bg-maroon/5 border border-transparent hover:border-maroon/15"
+              }`}
+          >
+            <Heart size={13} strokeWidth={2.5} className={isActive("/favorites") ? "fill-white" : ""} />
+            <span>Favourites</span>
+          </Link>
+
+          {/* Theme toggle */}
+          <button
+            onClick={() => setTheme(isDark ? "light" : "dark")}
+            className="p-2 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-900 transition-all"
+            aria-label="Toggle theme"
+          >
+            {isDark
+              ? <Sun size={16} className="text-amber-400" />
+              : <Moon size={16} />}
+          </button>
+
+          {/* Profile */}
+          <div className="relative">
+            <button
+              onClick={() => setProfileOpen(o => !o)}
+              className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 transition-all group"
+            >
+              <div className="w-7 h-7 rounded-full bg-maroon/10 border border-maroon/20 flex items-center justify-center">
+                <span className="text-[11px] font-black text-maroon uppercase">
+                  {user?.name?.charAt(0) || "U"}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 hidden md:block max-w-[100px] truncate">
+                {user?.name || "User"}
+              </span>
+              <ChevronDown size={13} className={`text-slate-400 transition-transform duration-200 ${profileOpen ? "rotate-180" : ""}`} />
+            </button>
+
+            {profileOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setProfileOpen(false)} />
+                <div className="absolute right-0 top-full mt-1.5 w-44 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl shadow-xl py-1.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <div className="px-3 py-2 border-b border-slate-50 dark:border-slate-800 mb-1">
+                    <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight truncate">{user?.name}</p>
+                    <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
+                  </div>
+                  <button
+                    onClick={() => { setProfileOpen(false); logout(); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 transition-colors"
+                  >
+                    <LogOut size={13} />
+                    <span>Sign out</span>
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(o => !o)}
+            className="md:hidden p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all"
+          >
+            {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile nav drawer */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex flex-col">
+          <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <div className="relative ml-auto w-64 h-full bg-white dark:bg-slate-900 shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between px-4 h-14 border-b border-slate-100 dark:border-slate-800">
+              <span className="font-black text-maroon font-outfit tracking-tight">Menu</span>
+              <button onClick={() => setMobileMenuOpen(false)}>
+                <X size={18} className="text-slate-400" />
+              </button>
+            </div>
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+              {NAV_SECTIONS.map(({ href, label, icon: Icon }) => (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all
+                    ${isActive(href)
+                      ? "bg-maroon text-white shadow-lg shadow-maroon/20"
+                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                    }`}
+                >
+                  <Icon size={16} />
+                  <span>{label}</span>
+                </Link>
+              ))}
+              <Link
+                href="/favorites"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all
+                  ${isActive("/favorites")
+                    ? "bg-maroon text-white shadow-lg shadow-maroon/20"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+              >
+                <Heart size={16} />
+                <span>Favourites</span>
+              </Link>
+            </nav>
+          </div>
+        </div>
+      )}
+
+      {/* Main */}
+      <main className="flex-1 flex flex-col min-h-0">
+        {children}
+      </main>
+    </div>
+  );
 }
-
-// Minimal icons as SVG components
-const HomeIcon = () => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-    </svg>
-);
-
-const BookIcon = () => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-    </svg>
-);
-
-const LibraryIcon = () => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-    </svg>
-);
-
-const BookmarkIcon = () => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-    </svg>
-);
-
-const StarIcon = () => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.382-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-    </svg>
-);
-
-const SearchIcon = () => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-    </svg>
-);
-
-const CogIcon = () => (
-    <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-);
-
-const MenuIcon = () => (
-    <svg className="h-6 w-6 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
-    </svg>
-);

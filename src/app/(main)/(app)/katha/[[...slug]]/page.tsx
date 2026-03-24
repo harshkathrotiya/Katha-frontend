@@ -989,7 +989,7 @@ export default function KathaCollectionPage() {
         <div className="min-h-full bg-slate-50 dark:bg-slate-950 flex flex-col relative transition-colors duration-500 font-outfit pb-20 w-full">
           {/* List Header / Breadcrumbs */}
           {/* Optimized Topbar: Integrated Search, Sort & Actions */}
-          <div className="px-4 md:px-8 py-2 md:py-2.5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl sticky top-0 z-40 w-full shadow-sm">
+          <div className="px-4 md:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl sticky top-0 z-40 w-full">
             <div className="flex items-center gap-2 md:gap-4 overflow-hidden">
               <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
                 <button
@@ -1128,56 +1128,44 @@ export default function KathaCollectionPage() {
         </div>
       ) : (
         <div className="min-h-screen bg-white dark:bg-slate-950 flex flex-col relative pb-32 w-full">
-          <div className="px-5 md:px-10 py-3 flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-50 dark:border-slate-800 sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl z-40 w-full shadow-sm">
-            <div className="flex items-center gap-3 md:gap-4 overflow-hidden">
-              <button
-                onClick={() => router.push("/user")}
-                className="p-1.5 md:px-3 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 flex items-center gap-2"
-              >
-                <LayoutDashboard size={14} />
-                <span className="hidden md:inline">Dashboard</span>
-              </button>
-              <button
-                onClick={() => router.push("/favorites")}
-                className="p-1.5 md:px-3 md:py-2 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-lg hover:text-maroon transition-all text-[10px] md:text-xs font-black shadow-sm shrink-0 flex items-center gap-2"
-              >
-                <Heart size={14} />
-                <span className="hidden md:inline">Favorites</span>
-              </button>
-              <div className="h-6 w-px bg-slate-100 dark:bg-slate-800 mx-1 shrink-0 hidden sm:block" />
+          <div className="px-4 md:px-8 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl z-40 w-full">
+            <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 md:w-10 md:h-10 bg-maroon/5 flex items-center justify-center rounded-lg md:rounded-xl border border-maroon/10 text-maroon">
-                  <Library className="w-4 h-4 md:w-5 md:h-5" />
+                <div className="w-8 h-8 bg-maroon/8 flex items-center justify-center rounded-xl border border-maroon/15 text-maroon">
+                  <Library className="w-4 h-4" />
                 </div>
-                <h1 className="text-lg md:text-xl font-black text-slate-900 dark:text-white font-outfit tracking-tighter uppercase leading-none hidden sm:block">Gallery</h1>
+                <div>
+                  <h1 className="text-base font-black text-slate-900 dark:text-white font-outfit tracking-tight uppercase leading-none">Katha</h1>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.2em]">Collections</p>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 lg:justify-end">
-              <div className="relative flex-1 sm:flex-none sm:w-60 group">
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              <div className="relative flex-1 min-w-[160px] sm:w-52 group">
                 <Input
-                  placeholder="Seach Collections..."
+                  placeholder="Search collections..."
                   value={moveSearch}
                   onChange={(e) => handleSearch(e.target.value)}
-                  className="pl-9 h-9 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[8px] md:text-[9px]"
+                  className="pl-8 h-9 rounded-lg border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-maroon/30 focus:border-maroon/50 transition-all text-xs"
                 />
-                <Eye size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />
+                <Eye size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-colors" />
               </div>
 
-              <div className="flex bg-slate-100 dark:bg-slate-900 p-0.5 rounded-xl items-center gap-0.5 border border-slate-200 dark:border-slate-800 shrink-0">
-                <button onClick={() => setSortBy('name')} className={`px-2.5 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'name' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Name</button>
-                <button onClick={() => setSortBy('date')} className={`px-2.5 py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest transition-all ${sortBy === 'date' ? 'bg-white dark:bg-slate-800 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}>Date</button>
+              <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg items-center border border-slate-200 dark:border-slate-700 shrink-0">
+                <button onClick={() => setSortBy('name')} className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold transition-all ${sortBy === 'name' ? 'bg-white dark:bg-slate-900 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>Name</button>
+                <button onClick={() => setSortBy('date')} className={`px-2.5 py-1.5 rounded-md text-[10px] font-bold transition-all ${sortBy === 'date' ? 'bg-white dark:bg-slate-900 text-maroon shadow-sm' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>Date</button>
                 <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1.5 text-slate-400 hover:text-maroon transition-colors">
-                  {sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
+                  {sortOrder === 'asc' ? <ArrowUpAZ size={13} /> : <ArrowDownZA size={13} />}
                 </button>
               </div>
 
               <button
                 onClick={() => openInputModal('create_collection')}
-                className="flex items-center gap-2 px-4 md:px-5 py-2.5 bg-maroon hover:bg-[#6e171b] text-white rounded-xl font-black uppercase tracking-widest text-[8px] md:text-[10px] shadow-lg shadow-maroon/20 hover:-translate-y-0.5 transition-all"
+                className="flex items-center gap-1.5 px-4 py-2 bg-maroon hover:bg-[#6e171b] text-white rounded-lg font-bold text-xs shadow-lg shadow-maroon/20 hover:-translate-y-0.5 active:translate-y-0 transition-all shrink-0"
               >
-                <Plus size={16} strokeWidth={3} />
-                <span>New Collection</span>
+                <Plus size={14} strokeWidth={3} />
+                <span>New</span>
               </button>
             </div>
           </div>
