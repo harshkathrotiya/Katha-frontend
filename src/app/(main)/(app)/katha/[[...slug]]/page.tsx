@@ -180,6 +180,14 @@ export default function KathaCollectionPage() {
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
 
+  // Favorite Selection States
+  const [isFavModalOpen, setIsFavModalOpen] = useState(false);
+  const [activeFavItem, setActiveFavItem] = useState<any>(null);
+  const [favCollections, setFavCollections] = useState<any[]>([]);
+  const [isLoadingCollections, setIsLoadingCollections] = useState(false);
+  const [isCreatingInFav, setIsCreatingInFav] = useState(false);
+  const [newFavCollectionName, setNewFavCollectionName] = useState("");
+
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editorContent, setEditorContent] = useState("");
   const [editingFile, setEditingFile] = useState<any>(null);
@@ -503,6 +511,24 @@ export default function KathaCollectionPage() {
       if (!isGallery) setFilteredContents(prev => prev.map(mapper));
 
       const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
+
+      if (!item.isFav) {
+        // Favoriting: Show selection modal
+        setIsFavModalOpen(true);
+        setActiveFavItem(item);
+        setIsLoadingCollections(true);
+        try {
+          const res = await api.get('/favorites');
+          setFavCollections(res.data || []);
+        } catch (err) {
+          showToast('Failed to load collections', 'error');
+        } finally {
+          setIsLoadingCollections(false);
+        }
+        return;
+      }
+
+      // Unfavoriting: Toggle immediately
       const res = await api.post('/favorites/toggle', {
         itemId: item.id,
         itemType
@@ -526,6 +552,50 @@ export default function KathaCollectionPage() {
       setList(targetList.map(rollback));
       if (!isGallery) setFilteredContents(prev => prev.map(rollback));
       showToast(err.message || 'Failed to update Favourites', 'error');
+    }
+  };
+
+  const handleCompleteFav = async (collectionId?: string) => {
+    if (!activeFavItem) return;
+    try {
+      const isGallery = slug.length === 0;
+      const setList = isGallery ? setKathaList : setMixedContents;
+      const targetList = isGallery ? kathaList : mixedContents;
+
+      const itemType = activeFavItem.type === 'file' ? 'FILE' : 'FOLDER';
+      const res = await api.post('/favorites/toggle', {
+        itemId: activeFavItem.id,
+        itemType,
+        favoriteFolderId: collectionId
+      });
+
+      const { favorited } = res.data;
+      
+      const mapper = (it: any) => it.id === activeFavItem.id ? { ...it, isFav: favorited } : it;
+      setList(targetList.map(mapper));
+      if (!isGallery) setFilteredContents(prev => prev.map(mapper));
+
+      showToast(favorited ? 'Added to Favourites ♥' : 'Removed from Favourites', favorited ? 'success' : 'info');
+      setIsFavModalOpen(false);
+      setActiveFavItem(null);
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update Favourites', 'error');
+    }
+  };
+
+  const handleCreateFavCollection = async () => {
+    if (!newFavCollectionName.trim()) return;
+    try {
+      const res = await api.post('/favorites', { name: newFavCollectionName.trim() });
+      const newCollection = res.data?.data || res.data;
+      setFavCollections(prev => [...prev, newCollection]);
+      setIsCreatingInFav(false);
+      setNewFavCollectionName("");
+      showToast("Collection created successfully", "success");
+      // Optionally auto-select it
+      handleCompleteFav(newCollection.id);
+    } catch (err) {
+      showToast("Failed to create collection", "error");
     }
   };
 
@@ -1370,6 +1440,70 @@ export default function KathaCollectionPage() {
           <p className="font-medium text-slate-600 dark:text-slate-300">
             Are you sure you want to delete <span className="font-black text-slate-900 dark:text-white uppercase tracking-tighter">"{itemToDelete?.name || itemToDelete?.title}"</span>?
           </p>
+        </div>
+      </Modal>
+
+      {/* Favorite Selection Modal */}
+      <Modal 
+        isOpen={isFavModalOpen} 
+        onClose={() => { setIsFavModalOpen(false); setActiveFavItem(null); }} 
+        title="Add to Favourites"
+        maxWidth="max-w-md"
+      >
+        <div className="space-y-6 py-2">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Choose Collection</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select a collection to store this item</p>
+          </div>
+
+          <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            {isLoadingCollections ? (
+              [1, 2, 3].map(i => <div key={i} className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-900 animate-pulse" />)
+            ) : (
+              <>
+                {favCollections.map(col => (
+                  <button
+                    key={col.id}
+                    onClick={() => handleCompleteFav(col.id)}
+                    className="w-full text-left p-4 rounded-2xl border-2 border-slate-50 dark:border-slate-800 hover:border-maroon/30 hover:bg-maroon/[0.02] transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:bg-maroon/10 group-hover:text-maroon transition-colors">
+                        <Heart size={18} className="group-hover:fill-maroon" />
+                      </div>
+                      <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight text-xs">{col.name}</span>
+                    </div>
+                    <ChevronRight size={16} className="text-slate-300 group-hover:text-maroon group-hover:translate-x-1 transition-all" />
+                  </button>
+                ))}
+                
+                {!isCreatingInFav ? (
+                  <button
+                    onClick={() => setIsCreatingInFav(true)}
+                    className="w-full p-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-maroon/30 hover:bg-maroon/[0.02] transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-maroon group"
+                  >
+                    <Plus size={16} strokeWidth={3} />
+                    <span className="text-[10px] font-black uppercase tracking-widest">New Collection</span>
+                  </button>
+                ) : (
+                  <div className="p-4 bg-maroon/[0.03] rounded-2xl border-2 border-maroon/20 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center justify-between">
+                       <span className="text-[10px] font-black uppercase text-maroon">New Collection Name</span>
+                       <button onClick={() => setIsCreatingInFav(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14}/></button>
+                    </div>
+                    <Input 
+                      placeholder="Enter name..." 
+                      value={newFavCollectionName} 
+                      onChange={(e) => setNewFavCollectionName(e.target.value)}
+                      className="rounded-xl border-maroon/20 focus:border-maroon text-slate-800 dark:text-white"
+                      autoFocus
+                    />
+                    <Button onClick={handleCreateFavCollection} className="w-full bg-maroon text-white rounded-xl h-10 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-maroon/20">Create & Add</Button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </Modal>
 

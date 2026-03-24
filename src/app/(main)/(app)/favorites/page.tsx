@@ -38,8 +38,20 @@ interface FavItem {
   id: string;
   itemType: "FILE" | "FOLDER";
   order: number;
-  file?: { id: string; name: string; type: string } | null;
-  folder?: { id: string; name: string; section: string } | null;
+  file?: { 
+    id: string; 
+    name: string; 
+    type: string; 
+    parentFolderId: string | null; 
+    parent?: { id: string; name: string } | null 
+  } | null;
+  folder?: { 
+    id: string; 
+    name: string; 
+    section: string; 
+    parentFolderId: string | null; 
+    parent?: { id: string; name: string } | null 
+  } | null;
 }
 
 // ─── Toast ───────────────────────────────────────────────────────────────────
@@ -128,16 +140,105 @@ function FolderCard({
 }
 
 // ─── Favourite item row ───────────────────────────────────────────────────────
+function GroupedFolderView({
+  group,
+  onOpenItem,
+  onRemoveItem,
+  onOpenFolder,
+  onRemoveFolder,
+}: {
+  group: { id: string; name: string; items: FavItem[]; favoritedFolderItem?: FavItem };
+  onOpenItem: (item: FavItem) => void;
+  onRemoveItem: (item: FavItem) => void;
+  onOpenFolder: () => void;
+  onRemoveFolder: () => void;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-2">
+      {/* Folder Header */}
+      <div
+        className={`group w-full bg-slate-50/50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 md:p-4 flex items-center gap-4 shadow-sm hover:border-maroon/30 transition-all cursor-pointer
+          ${isExpanded ? "border-maroon/20" : ""}`}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="w-10 h-10 md:w-12 md:h-12 bg-maroon/5 rounded-xl flex items-center justify-center shrink-0">
+          <FolderOpen size={24} className={`text-maroon transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <h4 className="text-base font-bold text-slate-800 dark:text-white tracking-tight group-hover:text-maroon transition-colors">
+              {group.name}
+            </h4>
+            {group.favoritedFolderItem && (
+              <Heart size={12} className="text-maroon fill-maroon" />
+            )}
+          </div>
+          <p className="text-[10px] md:text-xs text-slate-400 font-medium uppercase tracking-wider">
+            {group.items.length} {group.items.length === 1 ? "Favorited Child" : "Favorited Children"}
+          </p>
+        </div>
+        
+        {/* Actions for the folder itself */}
+        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+           <button
+            onClick={(e) => { e.stopPropagation(); onOpenFolder(); }}
+            className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-maroon transition-all"
+            title="Open Original Folder"
+          >
+            <Eye size={14} />
+          </button>
+          {group.favoritedFolderItem && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onRemoveFolder(); }}
+              className="p-2 rounded-xl bg-red-50 dark:bg-red-950/30 text-red-400 hover:text-red-600 transition-all"
+              title="Remove Folder from Favourites"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        <ChevronRight size={20} className={`text-slate-300 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`} />
+      </div>
+
+      {/* Children */}
+      {isExpanded && (
+        <div className="flex flex-col gap-2 animate-in slide-in-from-top-2 duration-300">
+          {group.items.length === 0 && (
+            <div className="ml-8 p-4 text-[10px] font-medium text-slate-400 italic">
+              No favorited items inside this folder
+            </div>
+          )}
+          {group.items.map((item, idx) => (
+            <FavItemRow
+              key={item.id}
+              item={item}
+              idx={idx}
+              onOpen={() => onOpenItem(item)}
+              onRemove={() => onRemoveItem(item)}
+              isChild={true}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function FavItemRow({
   item,
   idx,
   onOpen,
   onRemove,
+  isChild = false
 }: {
   item: FavItem;
   idx: number;
   onOpen: () => void;
   onRemove: () => void;
+  isChild?: boolean;
 }) {
   const isFile = item.itemType === "FILE";
   const name = isFile ? item.file?.name : item.folder?.name;
@@ -145,7 +246,8 @@ function FavItemRow({
 
   return (
     <div
-      className="group w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 md:p-4 flex items-center gap-4 shadow-sm hover:border-maroon/30 transition-all cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-500"
+      className={`group w-full bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl p-3 md:p-4 flex items-center gap-4 shadow-sm hover:border-maroon/30 transition-all cursor-pointer animate-in fade-in slide-in-from-bottom-2 duration-500
+        ${isChild ? "ml-8 w-[calc(100%-2rem)] bg-slate-50/50 dark:bg-slate-800/20" : ""}`}
       style={{ animationDelay: `${idx * 40}ms` }}
       onClick={onOpen}
     >
@@ -479,18 +581,75 @@ export default function FavouritesPage() {
               </div>
             ) : items.length > 0 ? (
               <div className="flex flex-col gap-3">
-                {items.map((item, idx) => (
-                  <FavItemRow
-                    key={item.id}
-                    item={item}
-                    idx={idx}
-                    onOpen={() => handleOpenItem(item)}
-                    onRemove={() => {
-                      setItemToRemove(item);
-                      setIsDeleteItemOpen(true);
-                    }}
-                  />
-                ))}
+                {(() => {
+                  const groups: { [key: string]: { id: string; name: string; items: FavItem[]; favoritedFolderItem?: FavItem } } = {};
+                  const rootItems: FavItem[] = [];
+
+                  items.forEach(item => {
+                    if (item.itemType === "FILE") {
+                      const parent = item.file?.parent;
+                      if (parent) {
+                        if (!groups[parent.id]) {
+                          groups[parent.id] = { id: parent.id, name: parent.name, items: [] };
+                        }
+                        groups[parent.id].items.push(item);
+                      } else {
+                        rootItems.push(item);
+                      }
+                    } else {
+                      // Folder item
+                      const folder = item.folder!;
+                      if (!groups[folder.id]) {
+                        groups[folder.id] = { id: folder.id, name: folder.name, items: [], favoritedFolderItem: item };
+                      } else {
+                        groups[folder.id].favoritedFolderItem = item;
+                      }
+                    }
+                  });
+
+                  return (
+                    <>
+                      {/* Parent Groups */}
+                      {Object.values(groups).map((group) => (
+                        <GroupedFolderView
+                          key={group.id}
+                          group={group}
+                          onOpenItem={handleOpenItem}
+                          onRemoveItem={(item: FavItem) => {
+                            setItemToRemove(item);
+                            setIsDeleteItemOpen(true);
+                          }}
+                          onOpenFolder={() => {
+                             // Logic to open folder — since we only have Id/Name here, 
+                             // we'll use a generic section or assume katha
+                             const section = group.favoritedFolderItem?.folder?.section?.toLowerCase() || "katha";
+                             router.push(`/${section}/${group.name}`);
+                          }}
+                          onRemoveFolder={() => {
+                             if (group.favoritedFolderItem) {
+                               setItemToRemove(group.favoritedFolderItem);
+                               setIsDeleteItemOpen(true);
+                             }
+                          }}
+                        />
+                      ))}
+                      
+                      {/* Root Items */}
+                      {rootItems.map((item, idx) => (
+                        <FavItemRow
+                          key={item.id}
+                          item={item}
+                          idx={idx}
+                          onOpen={() => handleOpenItem(item)}
+                          onRemove={() => {
+                            setItemToRemove(item);
+                            setIsDeleteItemOpen(true);
+                          }}
+                        />
+                      ))}
+                    </>
+                  );
+                })()}
               </div>
             ) : null
           )}
