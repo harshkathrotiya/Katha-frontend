@@ -6,10 +6,10 @@ import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
 import TextAlign from "@tiptap/extension-text-align";
-import Typography from "@tiptap/extension-typography";
 import { Color } from "@tiptap/extension-text-style/color";
 import { TextStyle } from "@tiptap/extension-text-style/text-style";
 import { FontFamily } from "@tiptap/extension-text-style/font-family";
+import { FontSize } from "@tiptap/extension-text-style/font-size";
 import CharacterCount from "@tiptap/extension-character-count";
 import Placeholder from "@tiptap/extension-placeholder";
 import Link from "@tiptap/extension-link";
@@ -25,11 +25,10 @@ import {
   Superscript as SupIcon, Undo2, Redo2, Save, X,
   ChevronDown, Type, Palette, Search, BookOpen,
   ZoomIn, ZoomOut, Maximize2, Minimize2,
-  CheckCheck, AlertCircle, Clock, Printer,
-  ChevronLeft, ChevronRight
+  CheckCheck, AlertCircle, Clock
 } from "lucide-react";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 interface KathaEditorProps {
   fileId: string;
   fileName: string;
@@ -40,145 +39,148 @@ interface KathaEditorProps {
   readOnly?: boolean;
 }
 type SaveStatus = "saved" | "saving" | "unsaved" | "error";
+type DropdownKey = "heading" | "font" | "fontsize" | "highlight" | "textcolor" | "lineheight" | "link" | null;
 
 // ─── Constants ────────────────────────────────────────────────────────────────
+const MAROON = "#8b1D1D";
+
 const HIGHLIGHT_COLORS = [
-  { color: "#FEF08A", name: "Yellow" },
-  { color: "#BBF7D0", name: "Green" },
-  { color: "#BFDBFE", name: "Blue" },
-  { color: "#FED7AA", name: "Orange" },
-  { color: "#F5D0FE", name: "Purple" },
-  { color: "#FECACA", name: "Red" },
+  { c: "#FEF08A", n: "Yellow" }, { c: "#BBF7D0", n: "Green" },
+  { c: "#BFDBFE", n: "Blue" },  { c: "#FED7AA", n: "Orange" },
+  { c: "#F5D0FE", n: "Purple" },{ c: "#FECACA", n: "Red" },
+  { c: "#E2E8F0", n: "Gray" },
 ];
 
 const TEXT_COLORS = [
-  { color: "#000000", name: "Black" },
-  { color: "#374151", name: "Dark" },
-  { color: "#8b1D1D", name: "Maroon" },
-  { color: "#dc2626", name: "Red" },
-  { color: "#d97706", name: "Amber" },
-  { color: "#16a34a", name: "Green" },
-  { color: "#2563eb", name: "Blue" },
-  { color: "#7c3aed", name: "Purple" },
-  { color: "#db2777", name: "Pink" },
+  { c: "#111827", n: "Black" }, { c: MAROON,    n: "Maroon" },
+  { c: "#dc2626", n: "Red" },   { c: "#d97706", n: "Amber" },
+  { c: "#16a34a", n: "Green" }, { c: "#2563eb", n: "Blue" },
+  { c: "#7c3aed", n: "Purple" },{ c: "#db2777", n: "Pink" },
+  { c: "#6b7280", n: "Gray" },
 ];
 
 const FONT_FAMILIES = [
-  { label: "Default", value: "" },
-  { label: "Serif", value: "Georgia, serif" },
-  { label: "Monospace", value: "ui-monospace, monospace" },
-  { label: "Noto Sans Gujarati", value: "'Noto Sans Gujarati', sans-serif" },
-  { label: "Shruti (Gujarati)", value: "Shruti, sans-serif" },
+  { label: "Default",              value: "" },
+  { label: "Georgia (Serif)",      value: "Georgia, serif" },
+  { label: "Courier (Mono)",       value: "'Courier New', monospace" },
+  { label: "Noto Sans Gujarati",   value: "'Noto Sans Gujarati', sans-serif" },
+  { label: "Shruti (Gujarati)",    value: "Shruti, sans-serif" },
 ];
+
+const FONT_SIZES = ["8","9","10","11","12","14","16","18","20","24","28","32","36","48","60","72"];
 
 const HEADING_OPTIONS = [
-  { label: "Normal text", level: 0, size: "text-sm", weight: "font-normal" },
-  { label: "Heading 1", level: 1, size: "text-2xl", weight: "font-bold" },
-  { label: "Heading 2", level: 2, size: "text-xl", weight: "font-bold" },
-  { label: "Heading 3", level: 3, size: "text-lg", weight: "font-semibold" },
-  { label: "Heading 4", level: 4, size: "text-base", weight: "font-semibold" },
+  { label: "Normal text", level: 0 },
+  { label: "Heading 1",   level: 1 },
+  { label: "Heading 2",   level: 2 },
+  { label: "Heading 3",   level: 3 },
+  { label: "Heading 4",   level: 4 },
 ];
 
-// ─── Tooltip ─────────────────────────────────────────────────────────────────
-function Tooltip({ label, shortcut, children }: {
+const LINE_HEIGHTS = [
+  { label: "Single",   value: "1" },
+  { label: "1.15",     value: "1.15" },
+  { label: "1.5",      value: "1.5" },
+  { label: "Double",   value: "2" },
+];
+
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
+function Tip({ label, shortcut, children }: {
   label: string; shortcut?: string; children: React.ReactNode;
 }) {
-  const [visible, setVisible] = useState(false);
-  const [pos, setPos] = useState({ x: 0, y: 0 });
-  const ref = useRef<HTMLDivElement>(null);
+  const [show, setShow] = useState(false);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const ref = useRef<HTMLSpanElement>(null);
 
   return (
-    <div
+    <span
       ref={ref}
       className="relative inline-flex"
-      onMouseEnter={(e) => {
-        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-        setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 8 });
-        setVisible(true);
-      }}
-      onMouseLeave={() => setVisible(false)}
+      onMouseEnter={() => { setRect(ref.current?.getBoundingClientRect() ?? null); setShow(true); }}
+      onMouseLeave={() => setShow(false)}
     >
       {children}
-      {visible && (
-        <div
+      {show && rect && (
+        <span
           className="fixed z-[9999] pointer-events-none"
-          style={{ left: pos.x, top: pos.y, transform: "translateX(-50%)" }}
+          style={{ left: rect.left + rect.width / 2, top: rect.bottom + 6 }}
         >
-          <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg flex items-center gap-2">
-            <span>{label}</span>
-            {shortcut && (
-              <span className="text-gray-400 font-mono text-[10px]">{shortcut}</span>
-            )}
-          </div>
-          <div
-            className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45"
-            style={{ marginTop: "-4px", zIndex: -1 }}
-          />
-        </div>
+          <span
+            className="relative -translate-x-1/2 inline-flex items-center gap-1.5 bg-gray-900 text-white text-[11px] rounded px-2 py-1 whitespace-nowrap shadow-lg"
+            style={{ transform: "translateX(-50%)" }}
+          >
+            {label}
+            {shortcut && <span className="text-gray-400 font-mono text-[10px]">{shortcut}</span>}
+          </span>
+        </span>
       )}
-    </div>
+    </span>
   );
 }
 
-// ─── Toolbar Button ───────────────────────────────────────────────────────────
-function TBtn({
-  onClick, active = false, disabled = false, label, shortcut, children, wide = false
+// ─── Toolbar button ───────────────────────────────────────────────────────────
+function TB({
+  onClick, active = false, disabled = false, label, shortcut, children, wide = false,
 }: {
   onClick: () => void; active?: boolean; disabled?: boolean;
   label: string; shortcut?: string; children: React.ReactNode; wide?: boolean;
 }) {
   return (
-    <Tooltip label={label} shortcut={shortcut}>
+    <Tip label={label} shortcut={shortcut}>
       <button
         type="button"
         onMouseDown={(e) => { e.preventDefault(); if (!disabled) onClick(); }}
         disabled={disabled}
-        className={`
-          inline-flex items-center justify-center rounded transition-all duration-100 select-none
-          ${wide ? "h-7 px-2 gap-1" : "h-7 w-7"}
-          ${active
-            ? "bg-[#c2e0f4] dark:bg-[#1e3a5f] text-[#0d47a1] dark:text-[#90caf9]"
-            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-          }
-          ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
-        `}
+        className={[
+          "inline-flex items-center justify-center rounded select-none transition-all duration-100",
+          wide ? "h-7 px-2 gap-1 text-xs" : "h-7 w-7",
+          active
+            ? "text-white shadow-sm"
+            : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700",
+          disabled ? "opacity-35 cursor-not-allowed" : "cursor-pointer",
+        ].join(" ")}
+        style={active ? { backgroundColor: MAROON } : {}}
       >
         {children}
       </button>
-    </Tooltip>
+    </Tip>
   );
 }
 
-function TDivider() {
-  return <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1 shrink-0" />;
+function Sep() {
+  return <div className="w-px h-5 bg-gray-200 dark:bg-gray-600 mx-0.5 shrink-0" />;
 }
 
-// ─── Dropdown wrapper with outside-click close ────────────────────────────────
-function DropdownPanel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+// ─── Dropdown panel ───────────────────────────────────────────────────────────
+function Dropdown({
+  onClose, children, style,
+}: { onClose: () => void; children: React.ReactNode; style?: React.CSSProperties }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
+    const fn = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    // small delay so the opening click doesn't immediately close it
+    const t = setTimeout(() => document.addEventListener("mousedown", fn), 50);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", fn); };
   }, [onClose]);
+
   return (
     <div
       ref={ref}
-      className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-xl z-[500] py-1"
-      style={{ minWidth: 160 }}
-      onMouseDown={(e) => e.stopPropagation()}
+      className="absolute top-full left-0 mt-1 z-[600] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-xl overflow-hidden"
+      style={{ minWidth: 160, ...style }}
+      onMouseDown={(e) => e.preventDefault()} // keep editor focus
     >
       {children}
     </div>
   );
 }
 
-// ─── Main Editor ─────────────────────────────────────────────────────────────
+// ─── Main Editor ──────────────────────────────────────────────────────────────
 export default function KathaEditor({
   fileId, fileName, initialContent, contentFormat = "html",
-  onSave, onClose, readOnly = false
+  onSave, onClose, readOnly = false,
 }: KathaEditorProps) {
 
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
@@ -189,59 +191,58 @@ export default function KathaEditor({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCount, setSearchCount] = useState(0);
   const [linkUrl, setLinkUrl] = useState("");
-
-  // Which dropdown is open — only one at a time
-  const [openDropdown, setOpenDropdown] = useState<
-    "heading" | "font" | "highlight" | "textcolor" | "link" | null
-  >(null);
-
+  const [openDD, setOpenDD] = useState<DropdownKey>(null);
   const [focusMode, setFocusMode] = useState(false);
+  const [lineHeight, setLineHeight] = useState("1.8");
+  const [fontSize, setFontSize] = useState("11");
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>("");
 
-  const toggle = (d: typeof openDropdown) =>
-    setOpenDropdown(prev => (prev === d ? null : d));
-  const closeAll = () => setOpenDropdown(null);
+  const tog = (k: DropdownKey) => setOpenDD(p => p === k ? null : k);
+  const closeDD = () => setOpenDD(null);
 
-  // ── Parse initial content ─────────────────────────────────────────────────
-  const parseInitialContent = useCallback((): string => {
-    if (!initialContent || initialContent === "<p><br></p>" || initialContent === "") return "";
+  // ── Parse content ──────────────────────────────────────────────────────────
+  const parseContent = useCallback((): string => {
+    if (!initialContent || initialContent === "<p><br></p>" || !initialContent.trim()) return "";
     if (contentFormat === "json") {
       try { JSON.parse(initialContent); return initialContent; } catch {}
     }
     return initialContent;
   }, [initialContent, contentFormat]);
 
-  // ── Editor ────────────────────────────────────────────────────────────────
+  // ── Editor setup ───────────────────────────────────────────────────────────
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4, 5, 6] },
-        codeBlock: { HTMLAttributes: { class: "ke-code-block" } },
+        // disable built-in typography rules that break Gujarati
+        codeBlock: {
+          HTMLAttributes: { class: "ke-pre" },
+        },
       }),
       Underline,
       TextStyle,
       Color,
       FontFamily,
+      FontSize,
       Highlight.configure({ multicolor: true }),
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Typography,
+      TextAlign.configure({ types: ["heading", "paragraph", "blockquote"] }),
       CharacterCount,
       Placeholder.configure({
         placeholder: "Start writing…",
-        emptyEditorClass: "ke-empty",
+        emptyNodeClass: "ke-placeholder",
       }),
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: "ke-link", target: "_blank", rel: "noopener noreferrer" },
+        HTMLAttributes: { class: "ke-link", rel: "noopener noreferrer" },
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
       Subscript,
       Superscript,
     ],
-    content: parseInitialContent(),
+    content: parseContent(),
     editable: !readOnly,
     autofocus: !readOnly,
     onUpdate: ({ editor }) => {
@@ -250,18 +251,21 @@ export default function KathaEditor({
       setCharCount(editor.storage.characterCount?.characters() ?? text.length);
       setSaveStatus("unsaved");
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = setTimeout(() => {
-        handleAutoSave(editor.getJSON(), editor.getText());
-      }, 2000);
+      saveTimerRef.current = setTimeout(() => autoSave(editor.getJSON(), text), 2000);
+    },
+    onSelectionUpdate: ({ editor }) => {
+      // sync font size display
+      const sz = editor.getAttributes("textStyle").fontSize;
+      if (sz) setFontSize(sz.replace("pt", "").replace("px", ""));
     },
   });
 
   // Initial counts
   useEffect(() => {
     if (!editor) return;
-    const text = editor.getText();
-    setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
-    setCharCount(editor.storage.characterCount?.characters() ?? text.length);
+    const t = editor.getText();
+    setWordCount(t.trim() ? t.trim().split(/\s+/).length : 0);
+    setCharCount(editor.storage.characterCount?.characters() ?? t.length);
     lastSavedRef.current = JSON.stringify(editor.getJSON());
   }, [editor]);
 
@@ -271,440 +275,523 @@ export default function KathaEditor({
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
-      if (mod && e.key === "s") { e.preventDefault(); handleManualSave(); }
+      if (mod && e.key === "s") { e.preventDefault(); doSave(); }
       if (mod && e.key === "f") { e.preventDefault(); setShowSearch(s => !s); }
-      if (e.key === "Escape") { closeAll(); setShowSearch(false); }
+      if (e.key === "Escape") { closeDD(); setShowSearch(false); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [editor]);
 
-  // ── Save ──────────────────────────────────────────────────────────────────
-  const handleAutoSave = useCallback(async (json: any, text: string) => {
-    const str = JSON.stringify(json);
-    if (str === lastSavedRef.current) return;
+  // ── Save ───────────────────────────────────────────────────────────────────
+  const autoSave = useCallback(async (json: any, text: string) => {
+    const s = JSON.stringify(json);
+    if (s === lastSavedRef.current) return;
     setSaveStatus("saving");
     try {
-      await onSave(str, "json", text);
-      lastSavedRef.current = str;
+      await onSave(s, "json", text);
+      lastSavedRef.current = s;
       setSaveStatus("saved");
     } catch { setSaveStatus("error"); }
   }, [onSave]);
 
-  const handleManualSave = useCallback(async () => {
+  const doSave = useCallback(async () => {
     if (!editor) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSaveStatus("saving");
     try {
-      const str = JSON.stringify(editor.getJSON());
-      await onSave(str, "json", editor.getText());
-      lastSavedRef.current = str;
+      const s = JSON.stringify(editor.getJSON());
+      await onSave(s, "json", editor.getText());
+      lastSavedRef.current = s;
       setSaveStatus("saved");
     } catch { setSaveStatus("error"); }
   }, [editor, onSave]);
 
-  // ── Link ──────────────────────────────────────────────────────────────────
+  // ── Link ───────────────────────────────────────────────────────────────────
   const applyLink = () => {
     if (!editor) return;
-    if (linkUrl) {
-      editor.chain().focus().setLink({ href: linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl}` }).run();
+    const url = linkUrl.trim();
+    if (url) {
+      editor.chain().focus().setLink({ href: url.startsWith("http") ? url : `https://${url}` }).run();
     } else {
       editor.chain().focus().unsetLink().run();
     }
-    closeAll();
+    closeDD();
     setLinkUrl("");
   };
 
-  // ── Search ────────────────────────────────────────────────────────────────
+  // ── Search ─────────────────────────────────────────────────────────────────
   const doSearch = useCallback((q: string) => {
     setSearchQuery(q);
     if (!editor || !q.trim()) { setSearchCount(0); return; }
-    const matches = [...editor.getText().matchAll(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"))];
-    setSearchCount(matches.length);
+    const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    setSearchCount([...editor.getText().matchAll(rx)].length);
   }, [editor]);
 
   if (!editor) return null;
 
-  // ── Active heading label ──────────────────────────────────────────────────
+  // ── Helpers ────────────────────────────────────────────────────────────────
   const activeHeading = HEADING_OPTIONS.find(h =>
-    h.level === 0 ? !editor.isActive("heading") : editor.isActive("heading", { level: h.level })
+    h.level === 0 ? !editor.isActive("heading") : editor.isActive("heading", { level: h.level as any })
   ) ?? HEADING_OPTIONS[0];
 
-  // ── Save status ───────────────────────────────────────────────────────────
-  const statusMap = {
-    saved:   { icon: <CheckCheck size={12} />, text: "Saved",        cls: "text-green-600 dark:text-green-400" },
-    saving:  { icon: <Clock size={12} className="animate-spin" />,    text: "Saving…",     cls: "text-gray-400" },
-    unsaved: { icon: <div className="w-2 h-2 rounded-full bg-amber-400" />, text: "Unsaved", cls: "text-amber-500" },
-    error:   { icon: <AlertCircle size={12} />, text: "Error",        cls: "text-red-500" },
+  const stMap: Record<SaveStatus, { icon: React.ReactNode; label: string; cls: string }> = {
+    saved:   { icon: <CheckCheck size={12} />,                                                    label: "Saved",    cls: "text-green-600 dark:text-green-400" },
+    saving:  { icon: <Clock size={12} className="animate-spin opacity-60" />,                    label: "Saving…",  cls: "text-gray-400" },
+    unsaved: { icon: <span className="inline-block w-2 h-2 rounded-full bg-amber-400 mt-0.5" />, label: "Unsaved",  cls: "text-amber-500" },
+    error:   { icon: <AlertCircle size={12} />,                                                   label: "Error",    cls: "text-red-500" },
   };
-  const st = statusMap[saveStatus];
+  const st = stMap[saveStatus];
 
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className={`fixed inset-0 z-[200] flex flex-col ${focusMode ? "bg-[#f0f0f0] dark:bg-[#1a1a1a]" : "bg-[#f0f0f0] dark:bg-[#1a1a1a]"}`}>
+    <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "#f8f9fa" }}>
 
-      {/* ══ TOP CHROME (Title bar) ══════════════════════════════════════════ */}
-      <div className={`shrink-0 bg-white dark:bg-[#1f1f1f] border-b border-gray-200 dark:border-gray-700 ${focusMode ? "opacity-0 hover:opacity-100 transition-opacity duration-300 absolute top-0 left-0 right-0 z-20" : ""}`}>
-
-        {/* ── Title row ── */}
-        <div className="flex items-center h-11 px-3 gap-2">
-          {/* Close */}
-          <Tooltip label="Close editor">
-            <button
-              onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors shrink-0"
-            >
+      {/* ══ TITLE BAR ═══════════════════════════════════════════════════════ */}
+      <div
+        className={[
+          "shrink-0 bg-white dark:bg-[#1f1f1f] border-b border-gray-200 dark:border-gray-700 transition-opacity duration-300",
+          focusMode ? "opacity-0 hover:opacity-100 absolute top-0 left-0 right-0 z-30" : "",
+        ].join(" ")}
+      >
+        {/* Top row */}
+        <div className="flex items-center h-11 px-3 gap-2 border-b border-gray-100 dark:border-gray-800">
+          <Tip label="Close">
+            <button onClick={onClose}
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 transition-colors shrink-0">
               <X size={16} />
             </button>
-          </Tooltip>
+          </Tip>
 
-          {/* Doc icon */}
-          <div className="w-7 h-7 rounded flex items-center justify-center bg-[#4285f4]/10 shrink-0">
-            <BookOpen size={14} className="text-[#4285f4]" />
+          {/* Icon */}
+          <div className="w-7 h-7 rounded flex items-center justify-center shrink-0"
+            style={{ background: `${MAROON}15` }}>
+            <BookOpen size={14} style={{ color: MAROON }} />
           </div>
 
           {/* Title */}
-          <h1 className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 truncate min-w-0">
+          <span className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 truncate min-w-0 select-none">
             {fileName}
-          </h1>
+          </span>
+          {readOnly && (
+            <span className="text-[10px] px-2 py-0.5 rounded border font-semibold shrink-0"
+              style={{ color: MAROON, borderColor: `${MAROON}40`, background: `${MAROON}08` }}>
+              Read only
+            </span>
+          )}
 
-          {/* Right actions */}
+          {/* Right controls */}
           <div className="flex items-center gap-1 shrink-0">
             {/* Save status */}
-            <div className={`flex items-center gap-1.5 text-[11px] mr-1 ${st.cls}`}>
+            <div className={`flex items-center gap-1 text-[11px] font-medium mr-1 ${st.cls}`}>
               {st.icon}
-              <span className="hidden sm:inline">{st.text}</span>
+              <span className="hidden sm:inline">{st.label}</span>
             </div>
 
             {/* Search */}
-            <Tooltip label="Find" shortcut="Ctrl+F">
-              <button
-                onClick={() => setShowSearch(s => !s)}
+            <Tip label="Find" shortcut="Ctrl+F">
+              <button onClick={() => setShowSearch(s => !s)}
                 className={`w-8 h-8 flex items-center justify-center rounded transition-colors
-                  ${showSearch ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"}`}
-              >
+                  ${showSearch ? "text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"}`}
+                style={showSearch ? { background: MAROON } : {}}>
                 <Search size={15} />
               </button>
-            </Tooltip>
+            </Tip>
 
             {/* Focus mode */}
-            <Tooltip label={focusMode ? "Exit focus mode" : "Focus mode"}>
-              <button
-                onClick={() => setFocusMode(f => !f)}
+            <Tip label={focusMode ? "Exit focus" : "Focus mode"}>
+              <button onClick={() => setFocusMode(f => !f)}
                 className={`w-8 h-8 hidden sm:flex items-center justify-center rounded transition-colors
-                  ${focusMode ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"}`}
-              >
+                  ${focusMode ? "text-white" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"}`}
+                style={focusMode ? { background: MAROON } : {}}>
                 {focusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
               </button>
-            </Tooltip>
+            </Tip>
 
             {/* Zoom */}
-            <div className="hidden sm:flex items-center border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
-              <Tooltip label="Zoom out">
-                <button
-                  onClick={() => setZoom(z => Math.max(60, z - 10))}
-                  className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <ZoomOut size={13} />
+            <div className="hidden sm:flex items-center border border-gray-200 dark:border-gray-600 rounded overflow-hidden h-7 ml-1">
+              <Tip label="Zoom out">
+                <button onClick={() => setZoom(z => Math.max(50, z - 10))}
+                  className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-r border-gray-200 dark:border-gray-600">
+                  <ZoomOut size={12} />
                 </button>
-              </Tooltip>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400 w-10 text-center border-x border-gray-200 dark:border-gray-600 font-medium">
+              </Tip>
+              <span className="text-[11px] text-gray-600 dark:text-gray-400 w-11 text-center select-none font-medium">
                 {zoom}%
               </span>
-              <Tooltip label="Zoom in">
-                <button
-                  onClick={() => setZoom(z => Math.min(150, z + 10))}
-                  className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <ZoomIn size={13} />
+              <Tip label="Zoom in">
+                <button onClick={() => setZoom(z => Math.min(200, z + 10))}
+                  className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors border-l border-gray-200 dark:border-gray-600">
+                  <ZoomIn size={12} />
                 </button>
-              </Tooltip>
+              </Tip>
             </div>
 
-            {/* Save */}
+            {/* Save button */}
             {!readOnly && (
-              <Tooltip label="Save" shortcut="Ctrl+S">
-                <button
-                  onClick={handleManualSave}
-                  disabled={saveStatus === "saving"}
-                  className="flex items-center gap-1.5 h-8 px-3 bg-[#1a73e8] hover:bg-[#1765cc] text-white rounded text-xs font-medium transition-colors disabled:opacity-60 ml-1"
-                >
+              <Tip label="Save" shortcut="Ctrl+S">
+                <button onClick={doSave} disabled={saveStatus === "saving"}
+                  className="flex items-center gap-1.5 h-8 px-3 text-white text-xs font-semibold rounded transition-colors disabled:opacity-60 ml-1"
+                  style={{ background: MAROON }}>
                   <Save size={13} />
                   <span className="hidden sm:inline">Save</span>
                 </button>
-              </Tooltip>
+              </Tip>
             )}
           </div>
         </div>
 
-        {/* ── Search bar ── */}
+        {/* Search row */}
         {showSearch && (
-          <div className="flex items-center gap-2 px-3 pb-2 border-t border-gray-100 dark:border-gray-700 pt-2">
+          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900">
             <div className="relative">
-              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                autoFocus
-                type="text"
-                value={searchQuery}
+              <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input autoFocus type="text" value={searchQuery}
                 onChange={e => doSearch(e.target.value)}
-                placeholder="Find in document"
-                className="pl-8 pr-3 h-7 w-52 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
+                placeholder="Find in document…"
+                className="pl-7 pr-3 h-7 w-52 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none bg-white dark:bg-gray-800 dark:text-white"
+                style={{ "--tw-ring-color": MAROON, focusBorderColor: MAROON } as any}
+                onFocus={e => (e.target.style.borderColor = MAROON)}
+                onBlur={e => (e.target.style.borderColor = "")}
               />
             </div>
             {searchQuery && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {searchCount} {searchCount === 1 ? "result" : "results"}
+              <span className="text-xs text-gray-500">
+                {searchCount} result{searchCount !== 1 ? "s" : ""}
               </span>
             )}
-            <button onClick={() => { setShowSearch(false); setSearchQuery(""); }}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
-              <X size={14} />
+            <button onClick={() => { setShowSearch(false); doSearch(""); }}
+              className="text-gray-400 hover:text-gray-600 ml-auto">
+              <X size={13} />
             </button>
           </div>
         )}
 
-        {/* ══ TOOLBAR ═══════════════════════════════════════════════════════ */}
+        {/* ══ TOOLBAR ══════════════════════════════════════════════════════ */}
         {!readOnly && (
-          <div className="flex items-center h-9 px-2 gap-0.5 overflow-x-auto no-scrollbar border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-[#1f1f1f]">
+          <div className="flex items-center h-9 px-2 gap-0.5 overflow-x-auto scrollbar-none bg-white dark:bg-[#1f1f1f]">
 
             {/* Undo / Redo */}
-            <TBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} label="Undo" shortcut="Ctrl+Z">
+            <TB onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} label="Undo" shortcut="Ctrl+Z">
               <Undo2 size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} label="Redo" shortcut="Ctrl+Shift+Z">
+            </TB>
+            <TB onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} label="Redo" shortcut="Ctrl+Y">
               <Redo2 size={14} />
-            </TBtn>
+            </TB>
 
-            <TDivider />
+            <Sep />
 
-            {/* Heading dropdown */}
+            {/* Heading style */}
             <div className="relative shrink-0">
-              <Tooltip label="Text style">
+              <Tip label="Text style">
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); toggle("heading"); }}
-                  className="flex items-center gap-1 h-7 px-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors min-w-[120px] justify-between"
+                  onMouseDown={(e) => { e.preventDefault(); tog("heading"); }}
+                  className="flex items-center gap-1 h-7 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-w-[126px] justify-between text-xs text-gray-700 dark:text-gray-200 font-medium"
                 >
                   <span>{activeHeading.label}</span>
                   <ChevronDown size={12} className="text-gray-400 shrink-0" />
                 </button>
-              </Tooltip>
-              {openDropdown === "heading" && (
-                <DropdownPanel onClose={closeAll}>
+              </Tip>
+              {openDD === "heading" && (
+                <Dropdown onClose={closeDD} style={{ minWidth: 180 }}>
                   {HEADING_OPTIONS.map(h => (
-                    <button
-                      key={h.level}
+                    <button key={h.level}
                       onMouseDown={(e) => {
                         e.preventDefault();
-                        if (h.level === 0) editor.chain().focus().setParagraph().run();
-                        else editor.chain().focus().toggleHeading({ level: h.level as any }).run();
-                        closeAll();
+                        h.level === 0
+                          ? editor.chain().focus().setParagraph().run()
+                          : editor.chain().focus().toggleHeading({ level: h.level as any }).run();
+                        closeDD();
                       }}
-                      className={`w-full text-left px-3 py-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700
-                        ${(h.level === 0 ? !editor.isActive("heading") : editor.isActive("heading", { level: h.level as any }))
-                          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
-                        }`}
+                      className={`w-full text-left px-4 py-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-3 ${
+                        (h.level === 0 ? !editor.isActive("heading") : editor.isActive("heading", { level: h.level as any }))
+                          ? "font-semibold" : ""
+                      }`}
                     >
-                      <span className={`${h.size} ${h.weight} block leading-tight`} style={{
-                        ...(h.level === 1 ? { color: "#8b1D1D" } : h.level === 2 ? { color: "#8b1D1D" } : {})
-                      }}>
+                      <span
+                        className="block leading-tight"
+                        style={{
+                          fontSize: h.level === 0 ? 13 : h.level === 1 ? 20 : h.level === 2 ? 16 : h.level === 3 ? 14 : 13,
+                          fontWeight: h.level === 0 ? 400 : 700,
+                          color: h.level <= 2 && h.level > 0 ? MAROON : "inherit",
+                        }}
+                      >
                         {h.label}
                       </span>
                     </button>
                   ))}
-                </DropdownPanel>
+                </Dropdown>
               )}
             </div>
 
-            <TDivider />
+            <Sep />
 
             {/* Font family */}
             <div className="relative shrink-0">
-              <Tooltip label="Font">
+              <Tip label="Font family">
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); toggle("font"); }}
-                  className="flex items-center gap-1 h-7 px-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  onMouseDown={(e) => { e.preventDefault(); tog("font"); }}
+                  className="flex items-center gap-1 h-7 px-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
                 >
-                  <Type size={13} />
+                  <Type size={14} />
                   <ChevronDown size={11} className="text-gray-400" />
                 </button>
-              </Tooltip>
-              {openDropdown === "font" && (
-                <DropdownPanel onClose={closeAll}>
+              </Tip>
+              {openDD === "font" && (
+                <Dropdown onClose={closeDD} style={{ minWidth: 200 }}>
                   {FONT_FAMILIES.map(f => (
-                    <button
-                      key={f.value}
+                    <button key={f.value}
                       onMouseDown={(e) => {
                         e.preventDefault();
                         f.value ? editor.chain().focus().setFontFamily(f.value).run()
                           : editor.chain().focus().unsetFontFamily().run();
-                        closeAll();
+                        closeDD();
                       }}
-                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
                       style={{ fontFamily: f.value || "inherit" }}
                     >
                       {f.label}
                     </button>
                   ))}
-                </DropdownPanel>
+                </Dropdown>
               )}
             </div>
 
-            <TDivider />
+            {/* Font size */}
+            <div className="relative shrink-0">
+              <Tip label="Font size">
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); tog("fontsize"); }}
+                  className="flex items-center gap-0.5 h-7 px-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-xs text-gray-700 dark:text-gray-300 font-medium min-w-[38px] justify-center border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+                >
+                  {fontSize}
+                  <ChevronDown size={10} className="text-gray-400" />
+                </button>
+              </Tip>
+              {openDD === "fontsize" && (
+                <Dropdown onClose={closeDD} style={{ minWidth: 80, maxHeight: 240, overflowY: "auto" }}>
+                  {FONT_SIZES.map(s => (
+                    <button key={s}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        editor.chain().focus().setFontSize(`${s}pt`).run();
+                        setFontSize(s);
+                        closeDD();
+                      }}
+                      className={`w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors
+                        ${fontSize === s ? "font-semibold" : "text-gray-700 dark:text-gray-300"}`}
+                      style={fontSize === s ? { color: MAROON } : {}}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </Dropdown>
+              )}
+            </div>
+
+            <Sep />
 
             {/* Bold / Italic / Underline / Strike */}
-            <TBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} label="Bold" shortcut="Ctrl+B">
+            <TB onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} label="Bold" shortcut="Ctrl+B">
               <Bold size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} label="Italic" shortcut="Ctrl+I">
+            </TB>
+            <TB onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} label="Italic" shortcut="Ctrl+I">
               <Italic size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} label="Underline" shortcut="Ctrl+U">
+            </TB>
+            <TB onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} label="Underline" shortcut="Ctrl+U">
               <UIcon size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} label="Strikethrough">
+            </TB>
+            <TB onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} label="Strikethrough">
               <Strikethrough size={14} />
-            </TBtn>
+            </TB>
 
-            <TDivider />
+            <Sep />
 
             {/* Text color */}
             <div className="relative shrink-0">
-              <Tooltip label="Text color">
+              <Tip label="Text color">
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); toggle("textcolor"); }}
-                  className="flex flex-col items-center justify-center h-7 w-7 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors gap-0"
+                  onMouseDown={(e) => { e.preventDefault(); tog("textcolor"); }}
+                  className="inline-flex flex-col items-center justify-center h-7 w-8 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors gap-0 pb-0.5"
                 >
-                  <Palette size={13} className="text-gray-700 dark:text-gray-300" />
-                  <div className="w-4 h-1 rounded-sm mt-0.5" style={{ backgroundColor: editor.getAttributes("textStyle").color || "#000000" }} />
+                  <Palette size={13} className="text-gray-600 dark:text-gray-300 mt-0.5" />
+                  <div className="w-4 h-[3px] rounded-sm"
+                    style={{ background: editor.getAttributes("textStyle").color || "#111827" }} />
                 </button>
-              </Tooltip>
-              {openDropdown === "textcolor" && (
-                <DropdownPanel onClose={closeAll}>
-                  <div className="px-2 py-1.5">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-2 font-medium">Text color</p>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {TEXT_COLORS.map(({ color, name }) => (
-                        <Tooltip key={color} label={name}>
+              </Tip>
+              {openDD === "textcolor" && (
+                <Dropdown onClose={closeDD} style={{ minWidth: 180 }}>
+                  <div className="p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-2">Text colour</p>
+                    <div className="grid grid-cols-5 gap-1.5 mb-2">
+                      {TEXT_COLORS.map(({ c, n }) => (
+                        <Tip key={c} label={n}>
                           <button
-                            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setColor(color).run(); closeAll(); }}
+                            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setColor(c).run(); closeDD(); }}
                             className="w-6 h-6 rounded border border-gray-200 dark:border-gray-600 hover:scale-110 transition-transform shadow-sm"
-                            style={{ backgroundColor: color }}
+                            style={{ background: c }}
                           />
-                        </Tooltip>
+                        </Tip>
                       ))}
                     </div>
                     <button
-                      onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetColor().run(); closeAll(); }}
-                      className="mt-2 w-full text-[11px] text-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetColor().run(); closeDD(); }}
+                      className="w-full text-center text-[11px] py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 transition-colors"
                     >
-                      Remove color
+                      Remove colour
                     </button>
                   </div>
-                </DropdownPanel>
+                </Dropdown>
               )}
             </div>
 
             {/* Highlight */}
             <div className="relative shrink-0">
-              <Tooltip label="Highlight color">
+              <Tip label="Highlight color">
                 <button
-                  onMouseDown={(e) => { e.preventDefault(); toggle("highlight"); }}
-                  className={`flex flex-col items-center justify-center h-7 w-7 rounded transition-colors gap-0
-                    ${editor.isActive("highlight") ? "bg-[#c2e0f4] dark:bg-[#1e3a5f]" : "hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                  onMouseDown={(e) => { e.preventDefault(); tog("highlight"); }}
+                  className={`inline-flex flex-col items-center justify-center h-7 w-8 rounded transition-colors gap-0 pb-0.5 ${
+                    editor.isActive("highlight") ? "" : "hover:bg-gray-100 dark:hover:bg-gray-700"
+                  }`}
+                  style={editor.isActive("highlight") ? { background: `${MAROON}20` } : {}}
                 >
-                  <Highlighter size={13} className="text-gray-700 dark:text-gray-300" />
-                  <div className="w-4 h-1 rounded-sm mt-0.5 bg-yellow-300" />
+                  <Highlighter size={13} className="text-gray-600 dark:text-gray-300 mt-0.5" />
+                  <div className="w-4 h-[3px] rounded-sm bg-yellow-300" />
                 </button>
-              </Tooltip>
-              {openDropdown === "highlight" && (
-                <DropdownPanel onClose={closeAll}>
-                  <div className="px-2 py-1.5">
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-2 font-medium">Highlight color</p>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {HIGHLIGHT_COLORS.map(({ color, name }) => (
-                        <Tooltip key={color} label={name}>
+              </Tip>
+              {openDD === "highlight" && (
+                <Dropdown onClose={closeDD} style={{ minWidth: 180 }}>
+                  <div className="p-3">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold mb-2">Highlight colour</p>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      {HIGHLIGHT_COLORS.map(({ c, n }) => (
+                        <Tip key={c} label={n}>
                           <button
-                            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setHighlight({ color }).run(); closeAll(); }}
+                            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setHighlight({ color: c }).run(); closeDD(); }}
                             className="w-6 h-6 rounded border border-gray-200 dark:border-gray-600 hover:scale-110 transition-transform shadow-sm"
-                            style={{ backgroundColor: color }}
+                            style={{ background: c }}
                           />
-                        </Tooltip>
+                        </Tip>
                       ))}
                     </div>
                     <button
-                      onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetHighlight().run(); closeAll(); }}
-                      className="mt-2 w-full text-[11px] text-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                      onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetHighlight().run(); closeDD(); }}
+                      className="w-full text-center text-[11px] py-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-500 transition-colors"
                     >
                       Remove highlight
                     </button>
                   </div>
-                </DropdownPanel>
+                </Dropdown>
               )}
             </div>
 
-            <TDivider />
+            <Sep />
 
-            {/* Subscript / Superscript */}
-            <TBtn onClick={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive("subscript")} label="Subscript">
+            {/* Sub / Super */}
+            <TB onClick={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive("subscript")} label="Subscript">
               <SubIcon size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive("superscript")} label="Superscript">
+            </TB>
+            <TB onClick={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive("superscript")} label="Superscript">
               <SupIcon size={14} />
-            </TBtn>
+            </TB>
 
-            <TDivider />
+            <Sep />
+
+            {/* Line height */}
+            <div className="relative shrink-0">
+              <Tip label="Line spacing">
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); tog("lineheight"); }}
+                  className="flex items-center gap-0.5 h-7 px-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-600 dark:text-gray-300"
+                >
+                  {/* line-height icon */}
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <line x1="3" y1="2" x2="11" y2="2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <line x1="3" y1="5.5" x2="11" y2="5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <line x1="3" y1="9" x2="11" y2="9" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                    <line x1="3" y1="12" x2="11" y2="12" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+                  </svg>
+                  <ChevronDown size={10} className="text-gray-400" />
+                </button>
+              </Tip>
+              {openDD === "lineheight" && (
+                <Dropdown onClose={closeDD} style={{ minWidth: 140 }}>
+                  <div className="py-1">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold px-3 pt-1.5 pb-1">Line spacing</p>
+                    {LINE_HEIGHTS.map(({ label, value }) => (
+                      <button key={value}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          setLineHeight(value);
+                          // apply to all paragraphs via CSS var
+                          document.documentElement.style.setProperty("--ke-line-height", value);
+                          closeDD();
+                        }}
+                        className={`w-full text-left px-4 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between`}
+                        style={lineHeight === value ? { color: MAROON, fontWeight: 600 } : { color: "#374151" }}
+                      >
+                        {label}
+                        {lineHeight === value && <CheckCheck size={12} style={{ color: MAROON }} />}
+                      </button>
+                    ))}
+                  </div>
+                </Dropdown>
+              )}
+            </div>
+
+            <Sep />
 
             {/* Alignment */}
-            <TBtn onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} label="Align left" shortcut="Ctrl+Shift+L">
+            <TB onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} label="Align left" shortcut="Ctrl+Shift+L">
               <AlignLeft size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} label="Align center" shortcut="Ctrl+Shift+E">
+            </TB>
+            <TB onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} label="Align center" shortcut="Ctrl+Shift+E">
               <AlignCenter size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} label="Align right" shortcut="Ctrl+Shift+R">
+            </TB>
+            <TB onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} label="Align right" shortcut="Ctrl+Shift+R">
               <AlignRight size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().setTextAlign("justify").run()} active={editor.isActive({ textAlign: "justify" })} label="Justify" shortcut="Ctrl+Shift+J">
+            </TB>
+            <TB onClick={() => editor.chain().focus().setTextAlign("justify").run()} active={editor.isActive({ textAlign: "justify" })} label="Justify">
               <AlignJustify size={14} />
-            </TBtn>
+            </TB>
 
-            <TDivider />
+            <Sep />
 
             {/* Lists */}
-            <TBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} label="Bullet list" shortcut="Ctrl+Shift+8">
+            <TB onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} label="Bullet list">
               <List size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} label="Numbered list" shortcut="Ctrl+Shift+7">
+            </TB>
+            <TB onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} label="Numbered list">
               <ListOrdered size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive("taskList")} label="Checklist">
+            </TB>
+            <TB onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive("taskList")} label="Checklist">
               <ListChecks size={14} />
-            </TBtn>
+            </TB>
 
-            <TDivider />
+            <Sep />
 
-            {/* Blockquote / Code / Rule */}
-            <TBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} label="Quote" shortcut="Ctrl+Shift+B">
+            {/* Quote / Code / Rule */}
+            <TB onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} label="Blockquote">
               <Quote size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive("code")} label="Inline code" shortcut="Ctrl+E">
+            </TB>
+            <TB onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive("code")} label="Inline code" shortcut="Ctrl+E">
               <Code size={14} />
-            </TBtn>
-            <TBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} label="Horizontal line">
+            </TB>
+            <TB onClick={() => editor.chain().focus().setHorizontalRule().run()} label="Divider line">
               <Minus size={14} />
-            </TBtn>
+            </TB>
 
-            <TDivider />
+            <Sep />
 
             {/* Link */}
             <div className="relative shrink-0">
-              <TBtn
+              <TB
                 onClick={() => {
                   if (editor.isActive("link")) {
                     editor.chain().focus().unsetLink().run();
                   } else {
                     setLinkUrl(editor.getAttributes("link").href || "");
-                    toggle("link");
+                    tog("link");
                   }
                 }}
                 active={editor.isActive("link")}
@@ -712,11 +799,11 @@ export default function KathaEditor({
                 shortcut="Ctrl+K"
               >
                 <LinkIcon size={14} />
-              </TBtn>
-              {openDropdown === "link" && (
-                <DropdownPanel onClose={closeAll}>
-                  <div className="px-3 py-2 flex flex-col gap-2" style={{ minWidth: 260 }}>
-                    <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Insert link</p>
+              </TB>
+              {openDD === "link" && (
+                <Dropdown onClose={closeDD} style={{ minWidth: 268 }}>
+                  <div className="p-3 flex flex-col gap-2">
+                    <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">Insert link</p>
                     <input
                       autoFocus
                       type="url"
@@ -724,24 +811,28 @@ export default function KathaEditor({
                       onChange={e => setLinkUrl(e.target.value)}
                       onKeyDown={e => e.key === "Enter" && applyLink()}
                       placeholder="https://example.com"
-                      className="h-8 px-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white w-full"
+                      className="h-8 px-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none bg-white dark:bg-gray-900 dark:text-white w-full"
+                      style={{ focusBorderColor: MAROON } as any}
+                      onFocus={e => (e.target.style.borderColor = MAROON)}
+                      onBlur={e => (e.target.style.borderColor = "")}
                     />
                     <div className="flex gap-2">
                       <button
                         onMouseDown={(e) => { e.preventDefault(); applyLink(); }}
-                        className="flex-1 h-7 bg-[#1a73e8] text-white text-xs font-medium rounded hover:bg-[#1765cc] transition-colors"
+                        className="flex-1 h-7 text-white text-xs font-semibold rounded transition-colors"
+                        style={{ background: MAROON }}
                       >
                         Apply
                       </button>
                       <button
-                        onMouseDown={(e) => { e.preventDefault(); closeAll(); }}
+                        onMouseDown={(e) => { e.preventDefault(); closeDD(); }}
                         className="flex-1 h-7 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-xs font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
                         Cancel
                       </button>
                     </div>
                   </div>
-                </DropdownPanel>
+                </Dropdown>
               )}
             </div>
 
@@ -749,49 +840,48 @@ export default function KathaEditor({
         )}
       </div>
 
-      {/* ══ DOCUMENT CANVAS ════════════════════════════════════════════════ */}
+      {/* ══ DOCUMENT CANVAS ═══════════════════════════════════════════════ */}
       <div
         className="flex-1 overflow-y-auto"
-        style={{ backgroundColor: focusMode ? "#e8e8e8" : "#e8e8e8" }}
-        onClick={closeAll}
+        style={{ background: "#f0f0f0" }}
+        onClick={closeDD}
       >
+        {/* Page */}
         <div
-          className="mx-auto my-8"
+          className="mx-auto my-8 bg-white dark:bg-[#2d2d2d]"
           style={{
-            width: `${Math.min(816, 816 * zoom / 100)}px`,
-            transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
-            transformOrigin: zoom !== 100 ? "top center" : undefined,
+            width: 816,
+            boxShadow: "0 1px 4px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.08)",
+            minHeight: 1056,
+            padding: "96px 96px 120px",
+            transformOrigin: "top center",
+            transform: `scale(${zoom / 100})`,
+            marginBottom: zoom < 100 ? `${(1 - zoom / 100) * -1056}px` : undefined,
           }}
         >
-          {/* Page shadow + white background — exactly like Google Docs */}
-          <div
-            className="bg-white dark:bg-[#2d2d2d] relative"
-            style={{
-              boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
-              minHeight: "1056px",
-              padding: "72px 72px 96px",
-            }}
-          >
-            <EditorContent editor={editor} className="ke-doc" />
-          </div>
+          <EditorContent
+            editor={editor}
+            className="ke-doc"
+            style={{ ["--ke-lh" as any]: lineHeight }}
+          />
         </div>
-
-        {/* Spacer at bottom */}
-        <div className="h-12" />
+        <div style={{ height: 64 }} />
       </div>
 
-      {/* ══ STATUS BAR ══════════════════════════════════════════════════════ */}
-      <div className="shrink-0 flex items-center justify-between px-4 h-6 bg-[#1a73e8] text-white">
-        <div className="flex items-center gap-4 text-[11px]">
+      {/* ══ STATUS BAR ════════════════════════════════════════════════════ */}
+      <div
+        className="shrink-0 flex items-center justify-between px-4 h-6 text-white select-none"
+        style={{ background: MAROON }}
+      >
+        <div className="flex items-center gap-4 text-[11px] font-medium">
           <span>{wordCount.toLocaleString()} words</span>
-          <span className="hidden sm:inline">{charCount.toLocaleString()} characters</span>
+          <span className="hidden sm:inline opacity-80">{charCount.toLocaleString()} characters</span>
         </div>
-        <div className="flex items-center gap-3 text-[11px] opacity-80">
+        <div className="flex items-center gap-3 text-[11px] opacity-75">
           {!readOnly && <span className="hidden md:inline">Ctrl+S · save  •  Ctrl+F · find</span>}
-          <span>ProseMirror</span>
+          <span>Katha Editor</span>
         </div>
       </div>
-
     </div>
   );
 }
