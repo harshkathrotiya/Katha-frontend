@@ -826,8 +826,10 @@ export default function KathaCollectionPage() {
 
   const handleSearch = (q: string) => {
     setMoveSearch(q);
+    const isGallery = slug.length === 0;
     if (!q.trim()) {
-      setFilteredContents(mixedContents);
+      if (isGallery) setFilteredContents(kathaList);
+      else setFilteredContents(mixedContents);
       return;
     }
     // DSA: Search using Trie (O(L) where L is prefix length)
@@ -1156,7 +1158,7 @@ export default function KathaCollectionPage() {
                 <Input
                   placeholder="Seach Collections..."
                   value={moveSearch}
-                  onChange={(e) => setMoveSearch(e.target.value)}
+                  onChange={(e) => handleSearch(e.target.value)}
                   className="pl-9 h-9 rounded-xl border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 hover:border-maroon/30 transition-all font-black uppercase tracking-widest text-[8px] md:text-[9px]"
                 />
                 <Eye size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-hover:text-maroon transition-all" />

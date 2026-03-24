@@ -430,11 +430,21 @@ export default function FavouritesPage() {
   // ── Open item ─────────────────────────────────────────────────────────────
   const handleOpenItem = (item: FavItem) => {
     if (item.itemType === "FILE" && item.file) {
-      // Navigate to the parent section — files live inside katha/granth/book
-      router.push(`/katha`);
+      // Navigate to the parent folder's section and path
+      const section = (item.file.parent?.section || "KATHA").toLowerCase();
+      if (item.file.parent?.name) {
+        router.push(`/${section}/${item.file.parent.name}`);
+      } else {
+        router.push(`/${section}`);
+      }
     } else if (item.itemType === "FOLDER" && item.folder) {
-      const section = item.folder.section?.toLowerCase() || "katha";
-      router.push(`/${section}/${item.folder.name}`);
+      const section = (item.folder.section || "KATHA").toLowerCase();
+      // Use path if available (handles nested folders correctly), fall back to name
+      if (item.folder.path) {
+        router.push(`/${section}/${item.folder.path}`);
+      } else {
+        router.push(`/${section}/${item.folder.name}`);
+      }
     }
   };
 
@@ -620,10 +630,12 @@ export default function FavouritesPage() {
                             setIsDeleteItemOpen(true);
                           }}
                           onOpenFolder={() => {
-                             // Logic to open folder — since we only have Id/Name here, 
-                             // we'll use a generic section or assume katha
-                             const section = group.favoritedFolderItem?.folder?.section?.toLowerCase() || "katha";
-                             router.push(`/${section}/${group.name}`);
+                             const section = (group.favoritedFolderItem?.folder?.section || "KATHA").toLowerCase();
+                             if (group.favoritedFolderItem?.folder?.path) {
+                               router.push(`/${section}/${group.favoritedFolderItem.folder.path}`);
+                             } else {
+                               router.push(`/${section}/${group.name}`);
+                             }
                           }}
                           onRemoveFolder={() => {
                              if (group.favoritedFolderItem) {
