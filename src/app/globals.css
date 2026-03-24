@@ -128,227 +128,206 @@
   color: #94a3b8 !important;
 }
 
-/* ─── Katha Enterprise Editor (Tiptap / ProseMirror) ──────────────────────── */
+/* ─── Katha Enterprise Editor (Google Docs style) ────────────────────────── */
 
-/* Remove Quill CSS — Tiptap handles its own */
-.katha-editor .ProseMirror {
-  padding: 48px 56px;
-  min-height: 80vh;
+/* Document body */
+.ke-doc .ProseMirror {
   outline: none;
-  font-size: 16px;
-  line-height: 1.9;
-  color: inherit;
-  caret-color: #8b1D1D;
+  font-family: 'Arial', sans-serif;
+  font-size: 11pt;
+  line-height: 1.8;
+  color: #222;
+  min-height: 800px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
-
-@media (max-width: 640px) {
-  .katha-editor .ProseMirror {
-    padding: 24px 20px;
-  }
+.dark .ke-doc .ProseMirror {
+  color: #e2e8f0;
 }
 
 /* Placeholder */
-.katha-editor .ProseMirror p.is-editor-empty:first-child::before {
+.ke-doc .ProseMirror .ke-empty::before,
+.ke-doc .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
   float: left;
-  color: #94a3b8;
+  color: #9ca3af;
   pointer-events: none;
   height: 0;
   font-style: italic;
 }
 
-/* Typography */
-.katha-editor .ProseMirror h1 {
-  font-size: 2em;
-  font-weight: 900;
-  line-height: 1.2;
-  margin: 1.5em 0 0.5em;
-  color: #8b1D1D;
-  font-family: var(--font-outfit), serif;
-  letter-spacing: -0.02em;
-}
-.katha-editor .ProseMirror h2 {
-  font-size: 1.5em;
-  font-weight: 800;
+/* Headings */
+.ke-doc .ProseMirror h1 {
+  font-size: 20pt;
+  font-weight: 700;
   line-height: 1.3;
-  margin: 1.4em 0 0.4em;
+  margin: 20pt 0 6pt;
   color: #8b1D1D;
-  font-family: var(--font-outfit), serif;
+  font-family: Arial, sans-serif;
+  border-bottom: 1px solid #f0e0e0;
+  padding-bottom: 4pt;
 }
-.katha-editor .ProseMirror h3 {
-  font-size: 1.2em;
+.ke-doc .ProseMirror h2 {
+  font-size: 16pt;
   font-weight: 700;
-  line-height: 1.4;
-  margin: 1.2em 0 0.3em;
-  color: inherit;
+  line-height: 1.35;
+  margin: 16pt 0 4pt;
+  color: #8b1D1D;
+  font-family: Arial, sans-serif;
 }
-.katha-editor .ProseMirror h4,
-.katha-editor .ProseMirror h5,
-.katha-editor .ProseMirror h6 {
-  font-size: 1em;
-  font-weight: 700;
-  margin: 1em 0 0.3em;
-  color: inherit;
+.ke-doc .ProseMirror h3 {
+  font-size: 13pt;
+  font-weight: 600;
+  margin: 12pt 0 3pt;
+  color: #1f1f1f;
+}
+.dark .ke-doc .ProseMirror h3 { color: #e2e8f0; }
+.ke-doc .ProseMirror h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  margin: 10pt 0 2pt;
+  color: #374151;
+}
+.dark .ke-doc .ProseMirror h4 { color: #d1d5db; }
+.ke-doc .ProseMirror h5,
+.ke-doc .ProseMirror h6 {
+  font-size: 10pt;
+  font-weight: 600;
+  margin: 8pt 0 2pt;
+  color: #6b7280;
 }
 
-.katha-editor .ProseMirror p {
-  margin-bottom: 1.2em;
+/* Paragraphs */
+.ke-doc .ProseMirror p {
+  margin: 0 0 8pt 0;
+}
+
+/* Lists */
+.ke-doc .ProseMirror ul,
+.ke-doc .ProseMirror ol {
+  padding-left: 2em;
+  margin: 4pt 0 8pt;
+}
+.ke-doc .ProseMirror li { margin-bottom: 2pt; }
+.ke-doc .ProseMirror ul { list-style-type: disc; }
+.ke-doc .ProseMirror ul ul { list-style-type: circle; }
+.ke-doc .ProseMirror ul ul ul { list-style-type: square; }
+.ke-doc .ProseMirror ol { list-style-type: decimal; }
+
+/* Task list */
+.ke-doc .ProseMirror ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+.ke-doc .ProseMirror ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8pt;
+  margin-bottom: 3pt;
+}
+.ke-doc .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: #8b1D1D;
+  cursor: pointer;
+  margin-top: 3px;
+}
+.ke-doc .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
+  text-decoration: line-through;
+  color: #9ca3af;
 }
 
 /* Blockquote */
-.katha-editor .ProseMirror blockquote {
-  border-left: 3px solid #8b1D1D;
-  margin: 1.5em 0;
-  padding: 0.75em 1.5em;
-  background: #8b1D1D08;
-  border-radius: 0 12px 12px 0;
-  font-style: italic;
-  color: #64748b;
+.ke-doc .ProseMirror blockquote {
+  border-left: 3pt solid #8b1D1D;
+  margin: 8pt 0 8pt 0;
+  padding: 6pt 12pt;
+  color: #555;
+  background: #fdf6f6;
+  border-radius: 0 4pt 4pt 0;
 }
-.dark .katha-editor .ProseMirror blockquote {
-  background: #8b1D1D15;
-  color: #94a3b8;
+.dark .ke-doc .ProseMirror blockquote {
+  background: rgba(139,29,29,0.08);
+  color: #9ca3af;
 }
 
 /* Code */
-.katha-editor .ProseMirror code {
-  font-family: ui-monospace, monospace;
-  font-size: 0.875em;
-  background: #f1f5f9;
-  border: 1px solid #e2e8f0;
-  border-radius: 4px;
-  padding: 2px 6px;
-  color: #8b1D1D;
+.ke-doc .ProseMirror code {
+  font-family: 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  padding: 1px 4px;
+  color: #c0392b;
 }
-.dark .katha-editor .ProseMirror code {
+.dark .ke-doc .ProseMirror code {
   background: #1e293b;
   border-color: #334155;
   color: #f87171;
 }
-
-.katha-editor .ProseMirror pre {
-  background: #0f172a;
-  color: #e2e8f0;
-  border-radius: 12px;
-  padding: 1.25em 1.5em;
-  margin: 1.5em 0;
+.ke-doc .ProseMirror .ke-code-block,
+.ke-doc .ProseMirror pre {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 6px;
+  padding: 12pt 16pt;
+  margin: 8pt 0;
+  font-family: 'Courier New', monospace;
+  font-size: 9.5pt;
   overflow-x: auto;
-  font-family: ui-monospace, monospace;
-  font-size: 0.875em;
   line-height: 1.7;
 }
-
-/* Lists */
-.katha-editor .ProseMirror ul,
-.katha-editor .ProseMirror ol {
-  padding-left: 1.5em;
-  margin: 0.75em 0 1.25em;
-}
-.katha-editor .ProseMirror li {
-  margin-bottom: 0.3em;
-}
-.katha-editor .ProseMirror ul li {
-  list-style-type: disc;
-}
-.katha-editor .ProseMirror ol li {
-  list-style-type: decimal;
-}
-
-/* Task list */
-.katha-editor .ProseMirror ul[data-type="taskList"] {
-  list-style: none;
-  padding-left: 0;
-}
-.katha-editor .ProseMirror ul[data-type="taskList"] li {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.5em;
-}
-.katha-editor .ProseMirror ul[data-type="taskList"] li > label {
-  cursor: pointer;
-  margin-top: 2px;
-}
-.katha-editor .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  accent-color: #8b1D1D;
-  cursor: pointer;
-}
-.katha-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div {
-  text-decoration: line-through;
-  opacity: 0.5;
+.ke-doc .ProseMirror pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
 }
 
 /* Horizontal rule */
-.katha-editor .ProseMirror hr {
+.ke-doc .ProseMirror hr {
   border: none;
-  border-top: 2px solid #e2e8f0;
-  margin: 2em 0;
+  border-top: 1px solid #e5e7eb;
+  margin: 16pt 0;
 }
-.dark .katha-editor .ProseMirror hr {
-  border-top-color: #334155;
-}
+.dark .ke-doc .ProseMirror hr { border-top-color: #374151; }
 
 /* Links */
-.katha-editor .ProseMirror a {
-  color: #8b1D1D;
+.ke-doc .ProseMirror .ke-link,
+.ke-doc .ProseMirror a {
+  color: #1155cc;
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 2px;
   cursor: pointer;
-  transition: opacity 0.15s;
 }
-.katha-editor .ProseMirror a:hover {
-  opacity: 0.75;
-}
+.dark .ke-doc .ProseMirror a { color: #7baef8; }
 
 /* Highlight */
-.katha-editor .ProseMirror mark {
-  border-radius: 3px;
-  padding: 1px 2px;
+.ke-doc .ProseMirror mark {
+  border-radius: 2px;
+  padding: 1px 1px;
 }
 
-/* Selection */
-.katha-editor .ProseMirror ::selection {
-  background: #8b1D1D30;
+/* Selection highlight */
+.ke-doc .ProseMirror ::selection {
+  background: #b4d5fe;
+}
+.dark .ke-doc .ProseMirror ::selection {
+  background: rgba(59, 130, 246, 0.35);
 }
 
-/* Gapcursor */
-.katha-editor .ProseMirror .ProseMirror-gapcursor:after {
-  border-top-color: #8b1D1D;
+/* Gujarati / Indic text */
+.ke-doc .ProseMirror *[style*="Noto Sans Gujarati"],
+.ke-doc .ProseMirror *[style*="Shruti"] {
+  line-height: 2.1;
 }
 
-/* Focus indicator — subtle left pulse when typing */
-.katha-editor .ProseMirror:focus {
-  outline: none;
-}
+/* Focus ring on editor */
+.ke-doc .ProseMirror:focus { outline: none; }
 
-/* Gujarati font support */
-.katha-editor .ProseMirror *[lang="gu"],
-.katha-editor .ProseMirror .gujarati {
-  font-family: 'Noto Sans Gujarati', 'Shruti', 'Lohit Gujarati', sans-serif;
-  line-height: 2;
-}
+/* Cursor color */
+.ke-doc .ProseMirror { caret-color: #8b1D1D; }
 
-/* Dark mode text */
-.dark .katha-editor .ProseMirror {
-  color: #e2e8f0;
-}
-.dark .katha-editor .ProseMirror h1,
-.dark .katha-editor .ProseMirror h2 {
-  color: #f87171;
-}
-
-/* Scrollbar styling inside editor */
-.katha-editor::-webkit-scrollbar { width: 4px; }
-.katha-editor::-webkit-scrollbar-track { background: transparent; }
-.katha-editor::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 99px; }
-.dark .katha-editor::-webkit-scrollbar-thumb { background: #334155; }
-
-/* Floating menu placeholder */
-.katha-editor .ProseMirror p.is-empty::before {
-  content: attr(data-placeholder);
-  color: #cbd5e1;
-  pointer-events: none;
-  float: left;
-  height: 0;
-}
+/* Remove old Quill overrides — only used on pages that still import react-quill */

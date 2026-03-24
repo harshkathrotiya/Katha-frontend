@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useEditor, EditorContent, useEditorState } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
@@ -18,82 +18,164 @@ import TaskItem from "@tiptap/extension-task-item";
 import Subscript from "@tiptap/extension-subscript";
 import Superscript from "@tiptap/extension-superscript";
 import {
-  Bold, Italic, Underline as UnderlineIcon, Strikethrough,
+  Bold, Italic, Underline as UIcon, Strikethrough,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
-  List, ListOrdered, ListChecks,
-  Heading1, Heading2, Heading3,
-  Quote, Code, Minus,
-  Link as LinkIcon, Highlighter,
-  Subscript as SubIcon, Superscript as SupIcon,
-  Undo2, Redo2, Save, X, ChevronDown,
-  Type, Palette, Search, BookOpen,
-  ZoomIn, ZoomOut, Sun, Moon,
-  CheckCheck, AlertCircle
+  List, ListOrdered, ListChecks, Quote, Code, Minus,
+  Link as LinkIcon, Highlighter, Subscript as SubIcon,
+  Superscript as SupIcon, Undo2, Redo2, Save, X,
+  ChevronDown, Type, Palette, Search, BookOpen,
+  ZoomIn, ZoomOut, Maximize2, Minimize2,
+  CheckCheck, AlertCircle, Clock, Printer,
+  ChevronLeft, ChevronRight
 } from "lucide-react";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
+// ─── Types ───────────────────────────────────────────────────────────────────
 interface KathaEditorProps {
   fileId: string;
   fileName: string;
-  initialContent: string;         // HTML (legacy) or JSON string (ProseMirror)
+  initialContent: string;
   contentFormat?: "html" | "json";
   onSave: (content: string, format: "json", plainText: string) => Promise<void>;
   onClose: () => void;
   readOnly?: boolean;
 }
-
 type SaveStatus = "saved" | "saving" | "unsaved" | "error";
 
-// ─── Font sizes ──────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
+const HIGHLIGHT_COLORS = [
+  { color: "#FEF08A", name: "Yellow" },
+  { color: "#BBF7D0", name: "Green" },
+  { color: "#BFDBFE", name: "Blue" },
+  { color: "#FED7AA", name: "Orange" },
+  { color: "#F5D0FE", name: "Purple" },
+  { color: "#FECACA", name: "Red" },
+];
 
-const FONT_SIZES = ["12", "14", "16", "18", "20", "24", "28", "32", "36", "48"];
+const TEXT_COLORS = [
+  { color: "#000000", name: "Black" },
+  { color: "#374151", name: "Dark" },
+  { color: "#8b1D1D", name: "Maroon" },
+  { color: "#dc2626", name: "Red" },
+  { color: "#d97706", name: "Amber" },
+  { color: "#16a34a", name: "Green" },
+  { color: "#2563eb", name: "Blue" },
+  { color: "#7c3aed", name: "Purple" },
+  { color: "#db2777", name: "Pink" },
+];
+
 const FONT_FAMILIES = [
   { label: "Default", value: "" },
   { label: "Serif", value: "Georgia, serif" },
-  { label: "Mono", value: "ui-monospace, monospace" },
+  { label: "Monospace", value: "ui-monospace, monospace" },
   { label: "Noto Sans Gujarati", value: "'Noto Sans Gujarati', sans-serif" },
-  { label: "Shruti", value: "Shruti, sans-serif" },
+  { label: "Shruti (Gujarati)", value: "Shruti, sans-serif" },
 ];
 
-const HIGHLIGHT_COLORS = [
-  "#FEF08A", "#BBF7D0", "#BFDBFE", "#FED7AA",
-  "#F5D0FE", "#FECACA", "#E2E8F0"
+const HEADING_OPTIONS = [
+  { label: "Normal text", level: 0, size: "text-sm", weight: "font-normal" },
+  { label: "Heading 1", level: 1, size: "text-2xl", weight: "font-bold" },
+  { label: "Heading 2", level: 2, size: "text-xl", weight: "font-bold" },
+  { label: "Heading 3", level: 3, size: "text-lg", weight: "font-semibold" },
+  { label: "Heading 4", level: 4, size: "text-base", weight: "font-semibold" },
 ];
 
-// ─── Toolbar Button ──────────────────────────────────────────────────────────
-
-function ToolBtn({
-  onClick, active = false, disabled = false, title, children, className = ""
-}: {
-  onClick: () => void; active?: boolean; disabled?: boolean;
-  title: string; children: React.ReactNode; className?: string;
+// ─── Tooltip ─────────────────────────────────────────────────────────────────
+function Tooltip({ label, shortcut, children }: {
+  label: string; shortcut?: string; children: React.ReactNode;
 }) {
+  const [visible, setVisible] = useState(false);
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const ref = useRef<HTMLDivElement>(null);
+
   return (
-    <button
-      type="button"
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-      disabled={disabled}
-      title={title}
-      className={`p-1.5 rounded-lg transition-all duration-150 flex items-center justify-center
-        ${active
-          ? "bg-maroon text-white shadow-sm"
-          : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white"
-        }
-        ${disabled ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}
-        ${className}`}
+    <div
+      ref={ref}
+      className="relative inline-flex"
+      onMouseEnter={(e) => {
+        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        setPos({ x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+        setVisible(true);
+      }}
+      onMouseLeave={() => setVisible(false)}
     >
       {children}
-    </button>
+      {visible && (
+        <div
+          className="fixed z-[9999] pointer-events-none"
+          style={{ left: pos.x, top: pos.y, transform: "translateX(-50%)" }}
+        >
+          <div className="bg-gray-800 text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg flex items-center gap-2">
+            <span>{label}</span>
+            {shortcut && (
+              <span className="text-gray-400 font-mono text-[10px]">{shortcut}</span>
+            )}
+          </div>
+          <div
+            className="absolute -top-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45"
+            style={{ marginTop: "-4px", zIndex: -1 }}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
-function Divider() {
-  return <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 mx-0.5 shrink-0" />;
+// ─── Toolbar Button ───────────────────────────────────────────────────────────
+function TBtn({
+  onClick, active = false, disabled = false, label, shortcut, children, wide = false
+}: {
+  onClick: () => void; active?: boolean; disabled?: boolean;
+  label: string; shortcut?: string; children: React.ReactNode; wide?: boolean;
+}) {
+  return (
+    <Tooltip label={label} shortcut={shortcut}>
+      <button
+        type="button"
+        onMouseDown={(e) => { e.preventDefault(); if (!disabled) onClick(); }}
+        disabled={disabled}
+        className={`
+          inline-flex items-center justify-center rounded transition-all duration-100 select-none
+          ${wide ? "h-7 px-2 gap-1" : "h-7 w-7"}
+          ${active
+            ? "bg-[#c2e0f4] dark:bg-[#1e3a5f] text-[#0d47a1] dark:text-[#90caf9]"
+            : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }
+          ${disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}
+        `}
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
+}
+
+function TDivider() {
+  return <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1 shrink-0" />;
+}
+
+// ─── Dropdown wrapper with outside-click close ────────────────────────────────
+function DropdownPanel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+  return (
+    <div
+      ref={ref}
+      className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded shadow-xl z-[500] py-1"
+      style={{ minWidth: 160 }}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      {children}
+    </div>
+  );
 }
 
 // ─── Main Editor ─────────────────────────────────────────────────────────────
-
 export default function KathaEditor({
   fileId, fileName, initialContent, contentFormat = "html",
   onSave, onClose, readOnly = false
@@ -105,43 +187,38 @@ export default function KathaEditor({
   const [zoom, setZoom] = useState(100);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState(0);
-  const [currentResult, setCurrentResult] = useState(0);
-  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [searchCount, setSearchCount] = useState(0);
   const [linkUrl, setLinkUrl] = useState("");
-  const [showHighlightPicker, setShowHighlightPicker] = useState(false);
-  const [showColorPicker, setShowColorPicker] = useState(false);
-  const [showFontPicker, setShowFontPicker] = useState(false);
+
+  // Which dropdown is open — only one at a time
+  const [openDropdown, setOpenDropdown] = useState<
+    "heading" | "font" | "highlight" | "textcolor" | "link" | null
+  >(null);
+
   const [focusMode, setFocusMode] = useState(false);
-  const [isDark, setIsDark] = useState(false);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedRef = useRef<string>("");
 
-  // ── Parse initial content ──────────────────────────────────────────────────
+  const toggle = (d: typeof openDropdown) =>
+    setOpenDropdown(prev => (prev === d ? null : d));
+  const closeAll = () => setOpenDropdown(null);
 
+  // ── Parse initial content ─────────────────────────────────────────────────
   const parseInitialContent = useCallback((): string => {
-    if (!initialContent || initialContent === '<p><br></p>' || initialContent === '') {
-      return '';
-    }
+    if (!initialContent || initialContent === "<p><br></p>" || initialContent === "") return "";
     if (contentFormat === "json") {
-      // Already ProseMirror JSON — pass directly
-      try {
-        JSON.parse(initialContent);
-        return initialContent;
-      } catch { /* fall through to HTML */ }
+      try { JSON.parse(initialContent); return initialContent; } catch {}
     }
-    // HTML content (legacy) — Tiptap accepts HTML directly
     return initialContent;
   }, [initialContent, contentFormat]);
 
-  // ── Editor setup ──────────────────────────────────────────────────────────
-
+  // ── Editor ────────────────────────────────────────────────────────────────
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3, 4, 5, 6] },
-        codeBlock: { HTMLAttributes: { class: "not-prose" } },
+        codeBlock: { HTMLAttributes: { class: "ke-code-block" } },
       }),
       Underline,
       TextStyle,
@@ -152,12 +229,12 @@ export default function KathaEditor({
       Typography,
       CharacterCount,
       Placeholder.configure({
-        placeholder: "Start writing… (Supports Gujarati, Hindi, English)",
-        emptyEditorClass: "is-editor-empty",
+        placeholder: "Start writing…",
+        emptyEditorClass: "ke-empty",
       }),
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { class: "editor-link", target: "_blank", rel: "noopener noreferrer" },
+        HTMLAttributes: { class: "ke-link", target: "_blank", rel: "noopener noreferrer" },
       }),
       TaskList,
       TaskItem.configure({ nested: true }),
@@ -169,12 +246,9 @@ export default function KathaEditor({
     autofocus: !readOnly,
     onUpdate: ({ editor }) => {
       const text = editor.getText();
-      const words = text.trim() ? text.trim().split(/\s+/).length : 0;
-      setWordCount(words);
+      setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
       setCharCount(editor.storage.characterCount?.characters() ?? text.length);
       setSaveStatus("unsaved");
-
-      // Auto-save after 2 seconds of inactivity
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       saveTimerRef.current = setTimeout(() => {
         handleAutoSave(editor.getJSON(), editor.getText());
@@ -182,67 +256,39 @@ export default function KathaEditor({
     },
   });
 
-  // Detect dark mode
+  // Initial counts
   useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains("dark"));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    setIsDark(document.documentElement.classList.contains("dark"));
-    return () => observer.disconnect();
-  }, []);
-
-  // Initial word/char count
-  useEffect(() => {
-    if (editor) {
-      const text = editor.getText();
-      setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
-      setCharCount(editor.storage.characterCount?.characters() ?? text.length);
-      lastSavedRef.current = JSON.stringify(editor.getJSON());
-    }
+    if (!editor) return;
+    const text = editor.getText();
+    setWordCount(text.trim() ? text.trim().split(/\s+/).length : 0);
+    setCharCount(editor.storage.characterCount?.characters() ?? text.length);
+    lastSavedRef.current = JSON.stringify(editor.getJSON());
   }, [editor]);
 
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); };
-  }, []);
+  useEffect(() => () => { if (saveTimerRef.current) clearTimeout(saveTimerRef.current); }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-        e.preventDefault();
-        if (editor) handleManualSave();
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key === "f") {
-        e.preventDefault();
-        setShowSearch(s => !s);
-      }
-      if (e.key === "Escape") {
-        setShowSearch(false);
-        setShowLinkInput(false);
-        setShowHighlightPicker(false);
-        setShowColorPicker(false);
-        setShowFontPicker(false);
-      }
+    const h = (e: KeyboardEvent) => {
+      const mod = e.ctrlKey || e.metaKey;
+      if (mod && e.key === "s") { e.preventDefault(); handleManualSave(); }
+      if (mod && e.key === "f") { e.preventDefault(); setShowSearch(s => !s); }
+      if (e.key === "Escape") { closeAll(); setShowSearch(false); }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
   }, [editor]);
 
-  // ── Save functions ─────────────────────────────────────────────────────────
-
-  const handleAutoSave = useCallback(async (jsonContent: any, plainText: string) => {
-    const jsonStr = JSON.stringify(jsonContent);
-    if (jsonStr === lastSavedRef.current) return; // No change
+  // ── Save ──────────────────────────────────────────────────────────────────
+  const handleAutoSave = useCallback(async (json: any, text: string) => {
+    const str = JSON.stringify(json);
+    if (str === lastSavedRef.current) return;
     setSaveStatus("saving");
     try {
-      await onSave(jsonStr, "json", plainText);
-      lastSavedRef.current = jsonStr;
+      await onSave(str, "json", text);
+      lastSavedRef.current = str;
       setSaveStatus("saved");
-    } catch {
-      setSaveStatus("error");
-    }
+    } catch { setSaveStatus("error"); }
   }, [onSave]);
 
   const handleManualSave = useCallback(async () => {
@@ -250,366 +296,452 @@ export default function KathaEditor({
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     setSaveStatus("saving");
     try {
-      const jsonStr = JSON.stringify(editor.getJSON());
-      await onSave(jsonStr, "json", editor.getText());
-      lastSavedRef.current = jsonStr;
+      const str = JSON.stringify(editor.getJSON());
+      await onSave(str, "json", editor.getText());
+      lastSavedRef.current = str;
       setSaveStatus("saved");
-    } catch {
-      setSaveStatus("error");
-    }
+    } catch { setSaveStatus("error"); }
   }, [editor, onSave]);
 
-  // ── Link handler ───────────────────────────────────────────────────────────
-
-  const handleSetLink = () => {
+  // ── Link ──────────────────────────────────────────────────────────────────
+  const applyLink = () => {
     if (!editor) return;
     if (linkUrl) {
       editor.chain().focus().setLink({ href: linkUrl.startsWith("http") ? linkUrl : `https://${linkUrl}` }).run();
     } else {
       editor.chain().focus().unsetLink().run();
     }
-    setShowLinkInput(false);
+    closeAll();
     setLinkUrl("");
   };
 
-  // ── Search ─────────────────────────────────────────────────────────────────
-
-  const handleSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-    if (!editor || !query.trim()) { setSearchResults(0); setCurrentResult(0); return; }
-    const text = editor.getText();
-    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-    const matches = [...text.matchAll(regex)];
-    setSearchResults(matches.length);
-    setCurrentResult(matches.length > 0 ? 1 : 0);
+  // ── Search ────────────────────────────────────────────────────────────────
+  const doSearch = useCallback((q: string) => {
+    setSearchQuery(q);
+    if (!editor || !q.trim()) { setSearchCount(0); return; }
+    const matches = [...editor.getText().matchAll(new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"))];
+    setSearchCount(matches.length);
   }, [editor]);
 
   if (!editor) return null;
 
-  // ── Save status indicator ──────────────────────────────────────────────────
+  // ── Active heading label ──────────────────────────────────────────────────
+  const activeHeading = HEADING_OPTIONS.find(h =>
+    h.level === 0 ? !editor.isActive("heading") : editor.isActive("heading", { level: h.level })
+  ) ?? HEADING_OPTIONS[0];
 
-  const SaveIndicator = () => {
-    const map = {
-      saved: { icon: <CheckCheck size={13} />, text: "Saved", cls: "text-emerald-500" },
-      saving: { icon: <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />, text: "Saving…", cls: "text-slate-400" },
-      unsaved: { icon: <div className="w-2 h-2 rounded-full bg-amber-400" />, text: "Unsaved", cls: "text-amber-500" },
-      error: { icon: <AlertCircle size={13} />, text: "Save failed", cls: "text-red-500" },
-    };
-    const { icon, text, cls } = map[saveStatus];
-    return (
-      <div className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${cls}`}>
-        {icon}<span className="hidden sm:inline">{text}</span>
-      </div>
-    );
+  // ── Save status ───────────────────────────────────────────────────────────
+  const statusMap = {
+    saved:   { icon: <CheckCheck size={12} />, text: "Saved",        cls: "text-green-600 dark:text-green-400" },
+    saving:  { icon: <Clock size={12} className="animate-spin" />,    text: "Saving…",     cls: "text-gray-400" },
+    unsaved: { icon: <div className="w-2 h-2 rounded-full bg-amber-400" />, text: "Unsaved", cls: "text-amber-500" },
+    error:   { icon: <AlertCircle size={12} />, text: "Error",        cls: "text-red-500" },
   };
+  const st = statusMap[saveStatus];
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className={`fixed inset-0 z-[200] flex flex-col bg-white dark:bg-slate-950 transition-all duration-300 ${focusMode ? "bg-slate-50 dark:bg-slate-900" : ""}`}>
+    <div className={`fixed inset-0 z-[200] flex flex-col ${focusMode ? "bg-[#f0f0f0] dark:bg-[#1a1a1a]" : "bg-[#f0f0f0] dark:bg-[#1a1a1a]"}`}>
 
-      {/* ── Header ── */}
-      <div className={`shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-950/95 backdrop-blur-xl transition-all duration-300 ${focusMode ? "opacity-0 hover:opacity-100 absolute top-0 left-0 right-0 z-10" : ""}`}>
+      {/* ══ TOP CHROME (Title bar) ══════════════════════════════════════════ */}
+      <div className={`shrink-0 bg-white dark:bg-[#1f1f1f] border-b border-gray-200 dark:border-gray-700 ${focusMode ? "opacity-0 hover:opacity-100 transition-opacity duration-300 absolute top-0 left-0 right-0 z-20" : ""}`}>
 
-        {/* Top bar: title + actions */}
-        <div className="flex items-center justify-between px-4 md:px-6 h-12 gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* ── Title row ── */}
+        <div className="flex items-center h-11 px-3 gap-2">
+          {/* Close */}
+          <Tooltip label="Close editor">
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shrink-0"
+              className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors shrink-0"
             >
-              <X size={18} className="text-slate-500" />
+              <X size={16} />
             </button>
-            <div className="flex items-center gap-2 min-w-0">
-              <BookOpen size={14} className="text-maroon shrink-0" />
-              <h2 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight truncate max-w-[200px] md:max-w-md">
-                {fileName}
-              </h2>
-              {readOnly && (
-                <span className="px-2 py-0.5 bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 text-[9px] font-black uppercase tracking-widest rounded-full border border-amber-200 dark:border-amber-800 shrink-0">
-                  Read only
-                </span>
-              )}
-            </div>
+          </Tooltip>
+
+          {/* Doc icon */}
+          <div className="w-7 h-7 rounded flex items-center justify-center bg-[#4285f4]/10 shrink-0">
+            <BookOpen size={14} className="text-[#4285f4]" />
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            <SaveIndicator />
+          {/* Title */}
+          <h1 className="flex-1 text-sm font-medium text-gray-800 dark:text-gray-200 truncate min-w-0">
+            {fileName}
+          </h1>
 
-            <button
-              onClick={() => setShowSearch(s => !s)}
-              className={`p-1.5 rounded-lg transition-all ${showSearch ? "bg-maroon/10 text-maroon" : "text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800"}`}
-              title="Search (Ctrl+F)"
-            >
-              <Search size={16} />
-            </button>
-
-            <button
-              onClick={() => setFocusMode(f => !f)}
-              className={`p-1.5 rounded-lg transition-all hidden sm:flex ${focusMode ? "bg-maroon/10 text-maroon" : "text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"}`}
-              title="Focus mode"
-            >
-              {focusMode ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
-
-            <div className="hidden sm:flex items-center gap-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg p-0.5">
-              <button onClick={() => setZoom(z => Math.max(60, z - 10))} className="p-1 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-500 transition-all">
-                <ZoomOut size={13} />
-              </button>
-              <span className="text-[10px] font-black text-slate-500 w-9 text-center">{zoom}%</span>
-              <button onClick={() => setZoom(z => Math.min(150, z + 10))} className="p-1 rounded hover:bg-white dark:hover:bg-slate-700 text-slate-500 transition-all">
-                <ZoomIn size={13} />
-              </button>
+          {/* Right actions */}
+          <div className="flex items-center gap-1 shrink-0">
+            {/* Save status */}
+            <div className={`flex items-center gap-1.5 text-[11px] mr-1 ${st.cls}`}>
+              {st.icon}
+              <span className="hidden sm:inline">{st.text}</span>
             </div>
 
-            {!readOnly && (
+            {/* Search */}
+            <Tooltip label="Find" shortcut="Ctrl+F">
               <button
-                onClick={handleManualSave}
-                disabled={saveStatus === "saving"}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-maroon hover:bg-[#6e171b] text-white rounded-lg text-xs font-bold shadow-lg shadow-maroon/20 hover:-translate-y-0.5 active:translate-y-0 transition-all disabled:opacity-60"
-                title="Save (Ctrl+S)"
+                onClick={() => setShowSearch(s => !s)}
+                className={`w-8 h-8 flex items-center justify-center rounded transition-colors
+                  ${showSearch ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"}`}
               >
-                <Save size={13} />
-                <span className="hidden sm:inline">Save</span>
+                <Search size={15} />
               </button>
+            </Tooltip>
+
+            {/* Focus mode */}
+            <Tooltip label={focusMode ? "Exit focus mode" : "Focus mode"}>
+              <button
+                onClick={() => setFocusMode(f => !f)}
+                className={`w-8 h-8 hidden sm:flex items-center justify-center rounded transition-colors
+                  ${focusMode ? "bg-blue-50 dark:bg-blue-900/30 text-blue-600" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"}`}
+              >
+                {focusMode ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+              </button>
+            </Tooltip>
+
+            {/* Zoom */}
+            <div className="hidden sm:flex items-center border border-gray-200 dark:border-gray-600 rounded overflow-hidden">
+              <Tooltip label="Zoom out">
+                <button
+                  onClick={() => setZoom(z => Math.max(60, z - 10))}
+                  className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ZoomOut size={13} />
+                </button>
+              </Tooltip>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 w-10 text-center border-x border-gray-200 dark:border-gray-600 font-medium">
+                {zoom}%
+              </span>
+              <Tooltip label="Zoom in">
+                <button
+                  onClick={() => setZoom(z => Math.min(150, z + 10))}
+                  className="w-7 h-7 flex items-center justify-center text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <ZoomIn size={13} />
+                </button>
+              </Tooltip>
+            </div>
+
+            {/* Save */}
+            {!readOnly && (
+              <Tooltip label="Save" shortcut="Ctrl+S">
+                <button
+                  onClick={handleManualSave}
+                  disabled={saveStatus === "saving"}
+                  className="flex items-center gap-1.5 h-8 px-3 bg-[#1a73e8] hover:bg-[#1765cc] text-white rounded text-xs font-medium transition-colors disabled:opacity-60 ml-1"
+                >
+                  <Save size={13} />
+                  <span className="hidden sm:inline">Save</span>
+                </button>
+              </Tooltip>
             )}
           </div>
         </div>
 
-        {/* Search bar */}
+        {/* ── Search bar ── */}
         {showSearch && (
-          <div className="flex items-center gap-2 px-4 md:px-6 pb-2 animate-in slide-in-from-top-2 duration-200">
-            <div className="relative flex-1 max-w-sm">
-              <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <div className="flex items-center gap-2 px-3 pb-2 border-t border-gray-100 dark:border-gray-700 pt-2">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 autoFocus
                 type="text"
                 value={searchQuery}
-                onChange={e => handleSearch(e.target.value)}
-                placeholder="Search in document…"
-                className="w-full pl-8 pr-4 h-8 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:outline-none focus:border-maroon/50 text-slate-900 dark:text-white"
+                onChange={e => doSearch(e.target.value)}
+                placeholder="Find in document"
+                className="pl-8 pr-3 h-7 w-52 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white"
               />
             </div>
             {searchQuery && (
-              <span className="text-[10px] text-slate-400 font-bold shrink-0">
-                {currentResult}/{searchResults} results
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {searchCount} {searchCount === 1 ? "result" : "results"}
               </span>
             )}
+            <button onClick={() => { setShowSearch(false); setSearchQuery(""); }}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+              <X size={14} />
+            </button>
           </div>
         )}
 
-        {/* ── Toolbar ── */}
+        {/* ══ TOOLBAR ═══════════════════════════════════════════════════════ */}
         {!readOnly && (
-          <div className="flex items-center gap-0.5 px-3 md:px-4 py-2 overflow-x-auto no-scrollbar border-t border-slate-100 dark:border-slate-800/50">
+          <div className="flex items-center h-9 px-2 gap-0.5 overflow-x-auto no-scrollbar border-t border-gray-100 dark:border-gray-700 bg-white dark:bg-[#1f1f1f]">
 
-            {/* History */}
-            <ToolBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} title="Undo (Ctrl+Z)">
-              <Undo2 size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} title="Redo (Ctrl+Shift+Z)">
-              <Redo2 size={15} />
-            </ToolBtn>
+            {/* Undo / Redo */}
+            <TBtn onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} label="Undo" shortcut="Ctrl+Z">
+              <Undo2 size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} label="Redo" shortcut="Ctrl+Shift+Z">
+              <Redo2 size={14} />
+            </TBtn>
 
-            <Divider />
+            <TDivider />
 
-            {/* Headings */}
-            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} title="Heading 1">
-              <Heading1 size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Heading 2">
-              <Heading2 size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} title="Heading 3">
-              <Heading3 size={15} />
-            </ToolBtn>
-
-            <Divider />
-
-            {/* Text formatting */}
-            <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold (Ctrl+B)">
-              <Bold size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="Italic (Ctrl+I)">
-              <Italic size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} title="Underline (Ctrl+U)">
-              <UnderlineIcon size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} title="Strikethrough">
-              <Strikethrough size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive("subscript")} title="Subscript">
-              <SubIcon size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive("superscript")} title="Superscript">
-              <SupIcon size={15} />
-            </ToolBtn>
-
-            <Divider />
-
-            {/* Highlight */}
-            <div className="relative">
-              <ToolBtn
-                onClick={() => { setShowHighlightPicker(s => !s); setShowColorPicker(false); setShowFontPicker(false); }}
-                active={editor.isActive("highlight")}
-                title="Highlight"
-              >
-                <Highlighter size={15} />
-              </ToolBtn>
-              {showHighlightPicker && (
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 z-50 flex gap-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <button
-                    onMouseDown={() => { editor.chain().focus().unsetHighlight().run(); setShowHighlightPicker(false); }}
-                    className="w-6 h-6 rounded border-2 border-slate-300 bg-white flex items-center justify-center text-[9px] font-bold text-slate-400"
-                    title="Remove highlight"
-                  >✕</button>
-                  {HIGHLIGHT_COLORS.map(color => (
+            {/* Heading dropdown */}
+            <div className="relative shrink-0">
+              <Tooltip label="Text style">
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); toggle("heading"); }}
+                  className="flex items-center gap-1 h-7 px-2 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors min-w-[120px] justify-between"
+                >
+                  <span>{activeHeading.label}</span>
+                  <ChevronDown size={12} className="text-gray-400 shrink-0" />
+                </button>
+              </Tooltip>
+              {openDropdown === "heading" && (
+                <DropdownPanel onClose={closeAll}>
+                  {HEADING_OPTIONS.map(h => (
                     <button
-                      key={color}
-                      onMouseDown={() => { editor.chain().focus().setHighlight({ color }).run(); setShowHighlightPicker(false); }}
-                      className="w-6 h-6 rounded border border-slate-200 dark:border-slate-700 hover:scale-110 transition-transform"
-                      style={{ backgroundColor: color }}
-                    />
+                      key={h.level}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (h.level === 0) editor.chain().focus().setParagraph().run();
+                        else editor.chain().focus().toggleHeading({ level: h.level as any }).run();
+                        closeAll();
+                      }}
+                      className={`w-full text-left px-3 py-1.5 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700
+                        ${(h.level === 0 ? !editor.isActive("heading") : editor.isActive("heading", { level: h.level as any }))
+                          ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" : "text-gray-700 dark:text-gray-300"
+                        }`}
+                    >
+                      <span className={`${h.size} ${h.weight} block leading-tight`} style={{
+                        ...(h.level === 1 ? { color: "#8b1D1D" } : h.level === 2 ? { color: "#8b1D1D" } : {})
+                      }}>
+                        {h.label}
+                      </span>
+                    </button>
                   ))}
-                </div>
+                </DropdownPanel>
               )}
             </div>
 
-            {/* Text color */}
-            <div className="relative">
-              <ToolBtn
-                onClick={() => { setShowColorPicker(s => !s); setShowHighlightPicker(false); setShowFontPicker(false); }}
-                title="Text color"
-              >
-                <div className="flex flex-col items-center gap-0.5">
-                  <Palette size={13} />
-                  <div className="w-4 h-0.5 rounded" style={{ backgroundColor: editor.getAttributes("textStyle").color || "#8b1D1D" }} />
-                </div>
-              </ToolBtn>
-              {showColorPicker && (
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                  <input
-                    type="color"
-                    defaultValue={editor.getAttributes("textStyle").color || "#000000"}
-                    onInput={(e) => editor.chain().focus().setColor((e.target as HTMLInputElement).value).run()}
-                    className="w-8 h-8 cursor-pointer rounded border-none"
-                  />
-                </div>
-              )}
-            </div>
-
-            <Divider />
-
-            {/* Alignment */}
-            <ToolBtn onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} title="Align left">
-              <AlignLeft size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} title="Align center">
-              <AlignCenter size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} title="Align right">
-              <AlignRight size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().setTextAlign("justify").run()} active={editor.isActive({ textAlign: "justify" })} title="Justify">
-              <AlignJustify size={15} />
-            </ToolBtn>
-
-            <Divider />
-
-            {/* Lists */}
-            <ToolBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} title="Bullet list">
-              <List size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} title="Ordered list">
-              <ListOrdered size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive("taskList")} title="Task list">
-              <ListChecks size={15} />
-            </ToolBtn>
-
-            <Divider />
-
-            {/* Blocks */}
-            <ToolBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} title="Blockquote">
-              <Quote size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive("code")} title="Inline code">
-              <Code size={15} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} title="Divider">
-              <Minus size={15} />
-            </ToolBtn>
-
-            <Divider />
-
-            {/* Link */}
-            <div className="relative">
-              <ToolBtn
-                onClick={() => {
-                  if (editor.isActive("link")) {
-                    editor.chain().focus().unsetLink().run();
-                  } else {
-                    setLinkUrl(editor.getAttributes("link").href || "");
-                    setShowLinkInput(s => !s);
-                    setShowHighlightPicker(false);
-                    setShowColorPicker(false);
-                  }
-                }}
-                active={editor.isActive("link")}
-                title="Link"
-              >
-                <LinkIcon size={15} />
-              </ToolBtn>
-              {showLinkInput && (
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl p-2 z-50 flex gap-2 min-w-[240px] animate-in fade-in slide-in-from-top-2 duration-150">
-                  <input
-                    autoFocus
-                    type="url"
-                    value={linkUrl}
-                    onChange={e => setLinkUrl(e.target.value)}
-                    onKeyDown={e => e.key === "Enter" && handleSetLink()}
-                    placeholder="https://…"
-                    className="flex-1 h-8 px-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-transparent text-slate-900 dark:text-white focus:outline-none focus:border-maroon/50"
-                  />
-                  <button onMouseDown={handleSetLink} className="px-3 h-8 bg-maroon text-white rounded-lg text-xs font-bold hover:bg-[#6e171b] transition-colors">
-                    Set
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <Divider />
+            <TDivider />
 
             {/* Font family */}
-            <div className="relative">
-              <button
-                onMouseDown={(e) => { e.preventDefault(); setShowFontPicker(s => !s); setShowHighlightPicker(false); setShowColorPicker(false); }}
-                className="flex items-center gap-1 px-2 h-8 rounded-lg text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
-                title="Font family"
-              >
-                <Type size={13} />
-                <ChevronDown size={10} />
-              </button>
-              {showFontPicker && (
-                <div className="absolute top-full left-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl py-1 z-50 min-w-[180px] animate-in fade-in slide-in-from-top-2 duration-150">
+            <div className="relative shrink-0">
+              <Tooltip label="Font">
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); toggle("font"); }}
+                  className="flex items-center gap-1 h-7 px-2 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                >
+                  <Type size={13} />
+                  <ChevronDown size={11} className="text-gray-400" />
+                </button>
+              </Tooltip>
+              {openDropdown === "font" && (
+                <DropdownPanel onClose={closeAll}>
                   {FONT_FAMILIES.map(f => (
                     <button
                       key={f.value}
-                      onMouseDown={() => {
-                        if (f.value) {
-                          editor.chain().focus().setFontFamily(f.value).run();
-                        } else {
-                          editor.chain().focus().unsetFontFamily().run();
-                        }
-                        setShowFontPicker(false);
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        f.value ? editor.chain().focus().setFontFamily(f.value).run()
+                          : editor.chain().focus().unsetFontFamily().run();
+                        closeAll();
                       }}
-                      className="w-full text-left px-3 py-2 text-xs hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition-colors"
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
                       style={{ fontFamily: f.value || "inherit" }}
                     >
                       {f.label}
                     </button>
                   ))}
-                </div>
+                </DropdownPanel>
+              )}
+            </div>
+
+            <TDivider />
+
+            {/* Bold / Italic / Underline / Strike */}
+            <TBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} label="Bold" shortcut="Ctrl+B">
+              <Bold size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} label="Italic" shortcut="Ctrl+I">
+              <Italic size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} label="Underline" shortcut="Ctrl+U">
+              <UIcon size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} label="Strikethrough">
+              <Strikethrough size={14} />
+            </TBtn>
+
+            <TDivider />
+
+            {/* Text color */}
+            <div className="relative shrink-0">
+              <Tooltip label="Text color">
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); toggle("textcolor"); }}
+                  className="flex flex-col items-center justify-center h-7 w-7 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors gap-0"
+                >
+                  <Palette size={13} className="text-gray-700 dark:text-gray-300" />
+                  <div className="w-4 h-1 rounded-sm mt-0.5" style={{ backgroundColor: editor.getAttributes("textStyle").color || "#000000" }} />
+                </button>
+              </Tooltip>
+              {openDropdown === "textcolor" && (
+                <DropdownPanel onClose={closeAll}>
+                  <div className="px-2 py-1.5">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-2 font-medium">Text color</p>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {TEXT_COLORS.map(({ color, name }) => (
+                        <Tooltip key={color} label={name}>
+                          <button
+                            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setColor(color).run(); closeAll(); }}
+                            className="w-6 h-6 rounded border border-gray-200 dark:border-gray-600 hover:scale-110 transition-transform shadow-sm"
+                            style={{ backgroundColor: color }}
+                          />
+                        </Tooltip>
+                      ))}
+                    </div>
+                    <button
+                      onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetColor().run(); closeAll(); }}
+                      className="mt-2 w-full text-[11px] text-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Remove color
+                    </button>
+                  </div>
+                </DropdownPanel>
+              )}
+            </div>
+
+            {/* Highlight */}
+            <div className="relative shrink-0">
+              <Tooltip label="Highlight color">
+                <button
+                  onMouseDown={(e) => { e.preventDefault(); toggle("highlight"); }}
+                  className={`flex flex-col items-center justify-center h-7 w-7 rounded transition-colors gap-0
+                    ${editor.isActive("highlight") ? "bg-[#c2e0f4] dark:bg-[#1e3a5f]" : "hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                >
+                  <Highlighter size={13} className="text-gray-700 dark:text-gray-300" />
+                  <div className="w-4 h-1 rounded-sm mt-0.5 bg-yellow-300" />
+                </button>
+              </Tooltip>
+              {openDropdown === "highlight" && (
+                <DropdownPanel onClose={closeAll}>
+                  <div className="px-2 py-1.5">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-400 mb-2 font-medium">Highlight color</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {HIGHLIGHT_COLORS.map(({ color, name }) => (
+                        <Tooltip key={color} label={name}>
+                          <button
+                            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setHighlight({ color }).run(); closeAll(); }}
+                            className="w-6 h-6 rounded border border-gray-200 dark:border-gray-600 hover:scale-110 transition-transform shadow-sm"
+                            style={{ backgroundColor: color }}
+                          />
+                        </Tooltip>
+                      ))}
+                    </div>
+                    <button
+                      onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetHighlight().run(); closeAll(); }}
+                      className="mt-2 w-full text-[11px] text-center text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                    >
+                      Remove highlight
+                    </button>
+                  </div>
+                </DropdownPanel>
+              )}
+            </div>
+
+            <TDivider />
+
+            {/* Subscript / Superscript */}
+            <TBtn onClick={() => editor.chain().focus().toggleSubscript().run()} active={editor.isActive("subscript")} label="Subscript">
+              <SubIcon size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().toggleSuperscript().run()} active={editor.isActive("superscript")} label="Superscript">
+              <SupIcon size={14} />
+            </TBtn>
+
+            <TDivider />
+
+            {/* Alignment */}
+            <TBtn onClick={() => editor.chain().focus().setTextAlign("left").run()} active={editor.isActive({ textAlign: "left" })} label="Align left" shortcut="Ctrl+Shift+L">
+              <AlignLeft size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().setTextAlign("center").run()} active={editor.isActive({ textAlign: "center" })} label="Align center" shortcut="Ctrl+Shift+E">
+              <AlignCenter size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().setTextAlign("right").run()} active={editor.isActive({ textAlign: "right" })} label="Align right" shortcut="Ctrl+Shift+R">
+              <AlignRight size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().setTextAlign("justify").run()} active={editor.isActive({ textAlign: "justify" })} label="Justify" shortcut="Ctrl+Shift+J">
+              <AlignJustify size={14} />
+            </TBtn>
+
+            <TDivider />
+
+            {/* Lists */}
+            <TBtn onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} label="Bullet list" shortcut="Ctrl+Shift+8">
+              <List size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} label="Numbered list" shortcut="Ctrl+Shift+7">
+              <ListOrdered size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().toggleTaskList().run()} active={editor.isActive("taskList")} label="Checklist">
+              <ListChecks size={14} />
+            </TBtn>
+
+            <TDivider />
+
+            {/* Blockquote / Code / Rule */}
+            <TBtn onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} label="Quote" shortcut="Ctrl+Shift+B">
+              <Quote size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive("code")} label="Inline code" shortcut="Ctrl+E">
+              <Code size={14} />
+            </TBtn>
+            <TBtn onClick={() => editor.chain().focus().setHorizontalRule().run()} label="Horizontal line">
+              <Minus size={14} />
+            </TBtn>
+
+            <TDivider />
+
+            {/* Link */}
+            <div className="relative shrink-0">
+              <TBtn
+                onClick={() => {
+                  if (editor.isActive("link")) {
+                    editor.chain().focus().unsetLink().run();
+                  } else {
+                    setLinkUrl(editor.getAttributes("link").href || "");
+                    toggle("link");
+                  }
+                }}
+                active={editor.isActive("link")}
+                label="Insert link"
+                shortcut="Ctrl+K"
+              >
+                <LinkIcon size={14} />
+              </TBtn>
+              {openDropdown === "link" && (
+                <DropdownPanel onClose={closeAll}>
+                  <div className="px-3 py-2 flex flex-col gap-2" style={{ minWidth: 260 }}>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-400 font-medium">Insert link</p>
+                    <input
+                      autoFocus
+                      type="url"
+                      value={linkUrl}
+                      onChange={e => setLinkUrl(e.target.value)}
+                      onKeyDown={e => e.key === "Enter" && applyLink()}
+                      placeholder="https://example.com"
+                      className="h-8 px-2.5 text-sm border border-gray-300 dark:border-gray-600 rounded focus:outline-none focus:border-blue-500 bg-white dark:bg-gray-800 dark:text-white w-full"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onMouseDown={(e) => { e.preventDefault(); applyLink(); }}
+                        className="flex-1 h-7 bg-[#1a73e8] text-white text-xs font-medium rounded hover:bg-[#1765cc] transition-colors"
+                      >
+                        Apply
+                      </button>
+                      <button
+                        onMouseDown={(e) => { e.preventDefault(); closeAll(); }}
+                        className="flex-1 h-7 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 text-xs font-medium rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </DropdownPanel>
               )}
             </div>
 
@@ -617,77 +749,46 @@ export default function KathaEditor({
         )}
       </div>
 
-      {/* ── Selection Bubble (custom — Tiptap 3 no longer ships a React BubbleMenu) ── */}
-      {editor && !readOnly && !editor.state.selection.empty && (
-        <div className="fixed z-[300] pointer-events-none" style={{ top: 0, left: 0, width: "100%", height: "100%" }}>
-          <div
-            className="absolute pointer-events-auto flex items-center gap-0.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl px-1.5 py-1 animate-in fade-in slide-in-from-bottom-2 duration-150"
-            style={{
-              bottom: "auto",
-              left: "50%",
-              top: "50px",
-              transform: "translateX(-50%)",
-            }}
-          >
-            <ToolBtn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} title="Bold">
-              <Bold size={13} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} title="Italic">
-              <Italic size={13} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleUnderline().run()} active={editor.isActive("underline")} title="Underline">
-              <UnderlineIcon size={13} />
-            </ToolBtn>
-            <ToolBtn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive("strike")} title="Strike">
-              <Strikethrough size={13} />
-            </ToolBtn>
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
-            {HIGHLIGHT_COLORS.slice(0, 4).map(color => (
-              <button
-                key={color}
-                onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().setHighlight({ color }).run(); }}
-                className="w-4 h-4 rounded hover:scale-110 transition-transform border border-slate-200 dark:border-slate-700"
-                style={{ backgroundColor: color }}
-              />
-            ))}
-            <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />
-            <ToolBtn onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} title="Heading 2">
-              <Heading2 size={13} />
-            </ToolBtn>
-            <ToolBtn onClick={() => { setLinkUrl(""); setShowLinkInput(true); }} active={editor.isActive("link")} title="Link">
-              <LinkIcon size={13} />
-            </ToolBtn>
-          </div>
-        </div>
-      )}
-
-      {/* ── Editor area ── */}
+      {/* ══ DOCUMENT CANVAS ════════════════════════════════════════════════ */}
       <div
-        className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950 transition-colors"
-        onClick={() => { setShowHighlightPicker(false); setShowColorPicker(false); setShowFontPicker(false); }}
+        className="flex-1 overflow-y-auto"
+        style={{ backgroundColor: focusMode ? "#e8e8e8" : "#e8e8e8" }}
+        onClick={closeAll}
       >
         <div
-          className="max-w-4xl mx-auto my-8 md:my-12 px-4"
-          style={{ zoom: `${zoom}%` }}
+          className="mx-auto my-8"
+          style={{
+            width: `${Math.min(816, 816 * zoom / 100)}px`,
+            transform: zoom !== 100 ? `scale(${zoom / 100})` : undefined,
+            transformOrigin: zoom !== 100 ? "top center" : undefined,
+          }}
         >
-          <div className={`bg-white dark:bg-slate-900 shadow-xl border border-slate-200/60 dark:border-slate-800 rounded-2xl overflow-hidden min-h-[80vh] ${focusMode ? "shadow-2xl" : ""}`}>
-            <EditorContent
-              editor={editor}
-              className="katha-editor"
-            />
+          {/* Page shadow + white background — exactly like Google Docs */}
+          <div
+            className="bg-white dark:bg-[#2d2d2d] relative"
+            style={{
+              boxShadow: "0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)",
+              minHeight: "1056px",
+              padding: "72px 72px 96px",
+            }}
+          >
+            <EditorContent editor={editor} className="ke-doc" />
           </div>
         </div>
+
+        {/* Spacer at bottom */}
+        <div className="h-12" />
       </div>
 
-      {/* ── Status bar ── */}
-      <div className="shrink-0 flex items-center justify-between px-4 md:px-6 h-8 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-950">
-        <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+      {/* ══ STATUS BAR ══════════════════════════════════════════════════════ */}
+      <div className="shrink-0 flex items-center justify-between px-4 h-6 bg-[#1a73e8] text-white">
+        <div className="flex items-center gap-4 text-[11px]">
           <span>{wordCount.toLocaleString()} words</span>
-          <span className="hidden sm:inline">{charCount.toLocaleString()} chars</span>
+          <span className="hidden sm:inline">{charCount.toLocaleString()} characters</span>
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-          {!readOnly && <span className="hidden sm:inline">Ctrl+S to save • Ctrl+F to search</span>}
-          <span>Tiptap • ProseMirror</span>
+        <div className="flex items-center gap-3 text-[11px] opacity-80">
+          {!readOnly && <span className="hidden md:inline">Ctrl+S · save  •  Ctrl+F · find</span>}
+          <span>ProseMirror</span>
         </div>
       </div>
 
