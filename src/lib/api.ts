@@ -49,16 +49,21 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
             isRefreshing = true;
 
             try {
-                // deviceId is the only non-sensitive value we keep in localStorage
+                // deviceId and userId are non-sensitive — safe in localStorage / cookies
                 const deviceId = typeof window !== "undefined"
                     ? (localStorage.getItem("device_id") ?? "web-browser")
                     : "web-browser";
+
+                // userId from the user_id cookie (non-HttpOnly, set by server on login)
+                const userId = typeof window !== "undefined"
+                    ? document.cookie.match(/(?:^|;\s*)user_id=([^;]*)/)?.[1] ?? undefined
+                    : undefined;
 
                 const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
-                    body: JSON.stringify({ deviceId }),
+                    body: JSON.stringify({ deviceId, ...(userId ? { userId } : {}) }),
                 });
 
                 if (!refreshResponse.ok) throw new Error("Refresh failed");

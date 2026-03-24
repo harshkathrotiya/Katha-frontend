@@ -956,18 +956,26 @@ export default function KathaCollectionPage() {
     return results;
   };
 
-  const handleFileClick = (item: any) => {
-    if (item.type === 'file') {
-      let content = "";
+  const handleFileClick = async (item: any) => {
+    if (item.type !== 'file') return;
+    setEditingFile(item);
+    setEditorContent("");
+    setIsEditorOpen(true);
+    historyRef.current = new EditorHistory("");
+    try {
+      // Use dedicated content endpoint — avoids stale/double-parsed metadata
+      const res = await api.get(`/files/${item.id}/content`);
+      const content = res.data?.content ?? "";
+      setEditorContent(content);
+      historyRef.current = new EditorHistory(content);
+    } catch {
+      // Fallback: parse metadata from the list item if content endpoint fails
       try {
         const meta = JSON.parse(item.metadata || '{}');
-        content = meta.content || "";
-      } catch (e) { }
-      setEditorContent(content);
-      setEditingFile(item);
-      // DSA: Initialize History (DLL)
-      historyRef.current = new EditorHistory(content);
-      setIsEditorOpen(true);
+        const content = meta.content || "";
+        setEditorContent(content);
+        historyRef.current = new EditorHistory(content);
+      } catch { /* leave empty */ }
     }
   };
 
