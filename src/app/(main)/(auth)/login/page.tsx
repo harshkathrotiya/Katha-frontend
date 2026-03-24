@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
-import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -11,7 +10,6 @@ export default function LoginPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const router = useRouter();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,7 +21,7 @@ export default function LoginPage() {
             const email = formData.get("email") as string;
             const password = formData.get("password") as string;
 
-            // device_id is non-sensitive — safe in localStorage (no tokens here)
+            // device_id is non-sensitive — safe in localStorage
             let deviceId = localStorage.getItem("device_id");
             if (!deviceId) {
                 deviceId = `web-${Math.random().toString(36).substring(2, 15)}-${Date.now().toString(36)}`;
@@ -41,23 +39,32 @@ export default function LoginPage() {
             if (response.success) {
                 const { user } = response.data;
 
-                // Tokens are set as HttpOnly cookies by the server — never stored here.
-                // Only store non-sensitive display data.
+                // Cache display data
                 localStorage.setItem("user_name", user.name);
                 localStorage.setItem("user_email", user.email);
 
-                setIsLoading(false);
+                // The backend sets HttpOnly access_token + refresh_token cookies.
+                // In cross-domain production (Render → Vercel) those cookies land fine
+                // because SameSite=None;Secure is set.
+                //
+                // However, the Next.js middleware reads user_role to decide where to route.
+                // We also write it from JS here as a belt-and-suspenders guarantee,
+                // because if the backend cookie is dropped for any reason the middleware
+                // would redirect back to /login silently.
+                const maxAge = 7 * 24 * 60 * 60; // 7 days in seconds
+                document.cookie = `user_role=${user.role}; path=/; max-age=${maxAge}; SameSite=Lax`;
+                document.cookie = `user_id=${user.id}; path=/; max-age=${maxAge}; SameSite=Lax`;
 
-                if (user.role === "ADMIN") {
-                    router.push("/admin/dashboard");
-                } else {
-                    router.push("/user");
-                }
+                // Use hard navigation so the middleware re-evaluates with the fresh cookies.
+                // router.push() is a client-side transition and can race with cookie propagation.
+                const dest = user.role === "ADMIN" ? "/admin/dashboard" : "/user";
+                window.location.href = dest;
             }
         } catch (err: any) {
             console.error("Login failed:", err);
 
             let errorMessage = err.message || "Invalid credentials or device pending approval";
+
             if (err.error?.code === "VALIDATION_ERROR" && err.error.details) {
                 const fieldMap: Record<string, string> = {
                     password: "Password",
