@@ -962,24 +962,29 @@ export default function BookCollectionPage() {
   const handleFileClick = async (item: any) => {
     if (item.type !== 'file') return;
     setEditingFile(item);
-    setEditorContent("");
-    setIsEditorOpen(true);
-    historyRef.current = new EditorHistory("");
+    // Load content BEFORE opening editor so it mounts with the right content
+    let content = "";
+    let format: "html" | "json" = "html";
     try {
-      // Use dedicated content endpoint — avoids stale/double-parsed metadata
       const res = await api.get(`/files/${item.id}/content`);
-      const content = res.data?.content ?? "";
-      setEditorContent(content);
-      historyRef.current = new EditorHistory(content);
+      content = res.data?.content ?? "";
+      format = res.data?.format ?? "html";
     } catch {
-      // Fallback: parse metadata from the list item if content endpoint fails
       try {
         const meta = JSON.parse(item.metadata || '{}');
-        const content = meta.content || "";
-        setEditorContent(content);
-        historyRef.current = new EditorHistory(content);
+        if (meta.prosemirror) {
+          content = typeof meta.prosemirror === 'string' ? meta.prosemirror : JSON.stringify(meta.prosemirror);
+          format = "json";
+        } else {
+          content = meta.content || "";
+          format = "html";
+        }
       } catch { /* leave empty */ }
     }
+    setEditorContent(content);
+    setEditorFormat(format);
+    historyRef.current = new EditorHistory(content);
+    setIsEditorOpen(true);
   };
 
   if (loading) {
@@ -1383,6 +1388,7 @@ export default function BookCollectionPage() {
       {/* Enterprise Editor */}
       {isEditorOpen && editingFile && (
         <KathaEditor
+          key={editingFile.id}
           fileId={editingFile.id}
           fileName={editingFile.name || editingFile.title || "Untitled"}
           initialContent={editorContent}

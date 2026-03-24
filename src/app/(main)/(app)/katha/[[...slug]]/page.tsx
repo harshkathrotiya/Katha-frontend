@@ -962,33 +962,29 @@ export default function KathaCollectionPage() {
   const handleFileClick = async (item: any) => {
     if (item.type !== 'file') return;
     setEditingFile(item);
-    setEditorContent("");
-    setEditorFormat("html");
-    setIsEditorOpen(true);
-    historyRef.current = new EditorHistory("");
+    // Load content BEFORE opening editor so it mounts with the right content
+    let content = "";
+    let format: "html" | "json" = "html";
     try {
       const res = await api.get(`/files/${item.id}/content`);
-      const content = res.data?.content ?? "";
-      const format = res.data?.format ?? "html";
-      setEditorContent(content);
-      setEditorFormat(format);
-      historyRef.current = new EditorHistory(content);
+      content = res.data?.content ?? "";
+      format = res.data?.format ?? "html";
     } catch {
       try {
         const meta = JSON.parse(item.metadata || '{}');
-        // Check for new ProseMirror format first
         if (meta.prosemirror) {
-          const content = typeof meta.prosemirror === 'string' ? meta.prosemirror : JSON.stringify(meta.prosemirror);
-          setEditorContent(content);
-          setEditorFormat("json");
+          content = typeof meta.prosemirror === 'string' ? meta.prosemirror : JSON.stringify(meta.prosemirror);
+          format = "json";
         } else {
-          const content = meta.content || "";
-          setEditorContent(content);
-          setEditorFormat("html");
+          content = meta.content || "";
+          format = "html";
         }
-        historyRef.current = new EditorHistory("");
       } catch { /* leave empty */ }
     }
+    setEditorContent(content);
+    setEditorFormat(format);
+    historyRef.current = new EditorHistory(content);
+    setIsEditorOpen(true);
   };
 
   if (loading) {
@@ -1395,6 +1391,7 @@ export default function KathaCollectionPage() {
       {/* Enterprise Editor */}
       {isEditorOpen && editingFile && (
         <KathaEditor
+          key={editingFile.id}
           fileId={editingFile.id}
           fileName={editingFile.name || editingFile.title || "Untitled"}
           initialContent={editorContent}

@@ -128,12 +128,12 @@
   color: #94a3b8 !important;
 }
 
-/* ─── Katha Enterprise Editor ────────────────────────────────────────────── */
+/* ─── Katha Enterprise Editor ──────────────────────────────────────────────── */
 
-/* ── Document body ── */
+/* Document body */
 .ke-doc .ProseMirror {
   outline: none;
-  font-family: Arial, 'Helvetica Neue', sans-serif;
+  font-family: Arial, "Helvetica Neue", sans-serif;
   font-size: 11pt;
   line-height: var(--ke-lh, 1.8);
   color: #111827;
@@ -144,7 +144,7 @@
 }
 .dark .ke-doc .ProseMirror { color: #e5e7eb; }
 
-/* ── Placeholder ── */
+/* Placeholder */
 .ke-doc .ProseMirror .ke-placeholder::before,
 .ke-doc .ProseMirror p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
@@ -155,56 +155,53 @@
   font-style: italic;
 }
 
+/* Paragraphs */
+.ke-doc .ProseMirror p {
+  margin: 0 0 6pt;
+}
+
+/* Selection */
+.ke-doc .ProseMirror ::selection {
+  background: rgba(139,29,29,0.18);
+}
+
 /* ── Headings ── */
 .ke-doc .ProseMirror h1 {
   font-size: 24pt;
   font-weight: 700;
-  line-height: 1.25;
-  margin: 24pt 0 8pt;
+  line-height: 1.2;
+  margin: 20pt 0 8pt;
   color: #8b1D1D;
-  font-family: Arial, sans-serif;
   padding-bottom: 6pt;
-  border-bottom: 2px solid #f0dede;
+  border-bottom: 2px solid #f5e0e0;
 }
 .ke-doc .ProseMirror h2 {
   font-size: 18pt;
   font-weight: 700;
-  line-height: 1.3;
-  margin: 18pt 0 6pt;
+  line-height: 1.25;
+  margin: 16pt 0 6pt;
   color: #8b1D1D;
-  font-family: Arial, sans-serif;
 }
 .ke-doc .ProseMirror h3 {
   font-size: 14pt;
   font-weight: 600;
-  line-height: 1.35;
-  margin: 14pt 0 4pt;
+  line-height: 1.3;
+  margin: 12pt 0 4pt;
   color: #1f2937;
 }
 .dark .ke-doc .ProseMirror h3 { color: #e5e7eb; }
 .ke-doc .ProseMirror h4 {
   font-size: 11pt;
   font-weight: 600;
-  margin: 10pt 0 2pt;
+  margin: 10pt 0 3pt;
   color: #374151;
 }
 .dark .ke-doc .ProseMirror h4 { color: #d1d5db; }
-.ke-doc .ProseMirror h5,
-.ke-doc .ProseMirror h6 {
+.ke-doc .ProseMirror h5, .ke-doc .ProseMirror h6 {
   font-size: 10pt;
   font-weight: 600;
   margin: 8pt 0 2pt;
   color: #6b7280;
-}
-
-/* ── Paragraph ── */
-.ke-doc .ProseMirror p {
-  margin: 0 0 8pt;
-}
-
-/* ── Selection ── */
-.ke-doc .ProseMirror ::selection {
-  background: rgba(139, 29, 29, 0.18);
 }
 
 /* ── Lists ── */
@@ -217,8 +214,11 @@
 .ke-doc .ProseMirror ul ul { list-style-type: circle; }
 .ke-doc .ProseMirror ul ul ul { list-style-type: square; }
 .ke-doc .ProseMirror ol { list-style-type: decimal; }
-.ke-doc .ProseMirror li { margin-bottom: 3pt; line-height: var(--ke-lh, 1.8); }
-.ke-doc .ProseMirror li p { margin-bottom: 0; }
+.ke-doc .ProseMirror li {
+  margin-bottom: 3pt;
+  line-height: var(--ke-lh, 1.8);
+}
+.ke-doc .ProseMirror li > p { margin-bottom: 0; }
 
 /* ── Task list ── */
 .ke-doc .ProseMirror ul[data-type="taskList"] {
@@ -233,7 +233,7 @@
 }
 .ke-doc .ProseMirror ul[data-type="taskList"] > li > label {
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 3px;
   cursor: pointer;
 }
 .ke-doc .ProseMirror ul[data-type="taskList"] > li > label input[type="checkbox"] {
@@ -241,7 +241,6 @@
   height: 15px;
   accent-color: #8b1D1D;
   cursor: pointer;
-  border-radius: 3px;
 }
 .ke-doc .ProseMirror ul[data-type="taskList"] > li > div { flex: 1; }
 .ke-doc .ProseMirror ul[data-type="taskList"] > li[data-checked="true"] > div {
@@ -252,25 +251,24 @@
 /* ── Blockquote ── */
 .ke-doc .ProseMirror blockquote {
   border-left: 4px solid #8b1D1D;
-  margin: 12pt 0;
+  margin: 10pt 0;
   padding: 8pt 16pt;
-  background: #fdf8f8;
+  background: #fdf7f7;
   border-radius: 0 6px 6px 0;
   color: #4b5563;
   font-style: italic;
 }
 .dark .ke-doc .ProseMirror blockquote {
-  background: rgba(139, 29, 29, 0.06);
+  background: rgba(139,29,29,0.07);
   color: #9ca3af;
-  border-left-color: #8b1D1D;
 }
-.ke-doc .ProseMirror blockquote p { margin-bottom: 0; }
+.ke-doc .ProseMirror blockquote p { margin: 0; }
 .ke-doc .ProseMirror blockquote p + p { margin-top: 6pt; }
 
-/* ── Code (inline) ── */
+/* ── Inline code ── */
 .ke-doc .ProseMirror code {
-  font-family: 'Courier New', 'Menlo', monospace;
-  font-size: 0.9em;
+  font-family: "Courier New", Menlo, monospace;
+  font-size: 0.88em;
   background: #f3f4f6;
   border: 1px solid #e5e7eb;
   border-radius: 3px;
@@ -284,19 +282,18 @@
   color: #f87171;
 }
 
-/* ── Code block (pre) ── */
-.ke-doc .ProseMirror pre,
-.ke-doc .ProseMirror .ke-pre {
+/* ── Code block ── */
+.ke-doc .ProseMirror .ke-pre,
+.ke-doc .ProseMirror pre {
   background: #1e1e2e;
   color: #cdd6f4;
   border-radius: 8px;
   padding: 14pt 18pt;
   margin: 10pt 0;
-  font-family: 'Courier New', 'Menlo', monospace;
+  font-family: "Courier New", Menlo, monospace;
   font-size: 9.5pt;
   overflow-x: auto;
   line-height: 1.75;
-  tab-size: 2;
 }
 .ke-doc .ProseMirror pre code {
   background: transparent;
@@ -310,8 +307,8 @@
 /* ── Horizontal rule ── */
 .ke-doc .ProseMirror hr {
   border: none;
-  border-top: 2px solid #f0dede;
-  margin: 18pt 0;
+  border-top: 2px solid #f5e0e0;
+  margin: 16pt 0;
 }
 .dark .ke-doc .ProseMirror hr { border-top-color: #3b2424; }
 
@@ -321,17 +318,12 @@
   color: #8b1D1D;
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(139,29,29,0.4);
+  text-decoration-color: rgba(139,29,29,0.35);
   cursor: pointer;
   transition: text-decoration-color 0.15s;
 }
-.ke-doc .ProseMirror a:hover {
-  text-decoration-color: #8b1D1D;
-}
-.dark .ke-doc .ProseMirror a {
-  color: #f87171;
-  text-decoration-color: rgba(248, 113, 113, 0.4);
-}
+.ke-doc .ProseMirror a:hover { text-decoration-color: #8b1D1D; }
+.dark .ke-doc .ProseMirror a { color: #f87171; text-decoration-color: rgba(248,113,113,0.4); }
 
 /* ── Highlight ── */
 .ke-doc .ProseMirror mark {
@@ -339,19 +331,16 @@
   padding: 0 2px;
 }
 
-/* ── Gujarati / Indic fonts ── */
+/* ── Gujarati / Indic ── */
 .ke-doc .ProseMirror span[style*="Noto Sans Gujarati"],
 .ke-doc .ProseMirror span[style*="Shruti"] {
   line-height: 2.2;
-  display: inline;
 }
-
-/* ── Scrollbar inside doc ── */
-.ke-doc .ProseMirror::-webkit-scrollbar { width: 0; }
 
 /* ── Focus ── */
 .ke-doc .ProseMirror:focus { outline: none; }
 
-/* ── Hide scrollbar on toolbar ── */
-.scrollbar-none::-webkit-scrollbar { display: none; }
-.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+/* ── Hide toolbar scrollbar ── */
+.ke-doc,
+[style*="scrollbarWidth:none"] { -ms-overflow-style: none; scrollbar-width: none; }
+[style*="scrollbarWidth:none"]::-webkit-scrollbar { display: none; }
