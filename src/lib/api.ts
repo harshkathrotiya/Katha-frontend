@@ -26,11 +26,20 @@ export async function fetcher(url: string, options: RequestInit = {}): Promise<a
         headers["Content-Type"] = "application/json";
     }
 
-    const response = await fetch(`${API_URL}${url}`, {
-        ...options,
-        headers,
-        credentials: "include", // send HttpOnly cookies automatically
-    });
+    let response: Response;
+    try {
+        response = await fetch(`${API_URL}${url}`, {
+            ...options,
+            headers,
+            credentials: "include", // send HttpOnly cookies automatically
+        });
+    } catch (e: any) {
+        console.error("API Fetch Error:", e);
+        if (e.message?.includes("Failed to fetch") || e.name === "TypeError") {
+            throw new Error(`Cannot connect to server at ${API_URL}. Check your internet or API URL.`);
+        }
+        throw e;
+    }
 
     // Token expired — attempt silent refresh once
     if (response.status === 401 && !url.includes("/auth/refresh") && !url.includes("/auth/login")) {
