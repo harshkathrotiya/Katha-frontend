@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useEditor, EditorContent } from "@tiptap/react";
+import { useEditor, EditorContent, BubbleMenu } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Highlight from "@tiptap/extension-highlight";
 import Underline from "@tiptap/extension-underline";
@@ -163,7 +163,11 @@ export default function KathaEditor({
   const [openDD,      setOpenDD]      = useState<DD>(null);
   const [focusMode,   setFocusMode]   = useState(false);
   const [lineHeight,  setLineHeight]  = useState("1.8");
+  const [hlColor,     setHlColor]     = useState("#FEF08A"); // Last used highlight color
+  const [textColor,   setTextColor]   = useState("#111827"); // Last used text color
   const [curFontSize, setCurFontSize] = useState("11");
+  const [showOutline, setshowOutline] = useState(false);
+  const [outline,      setOutline]     = useState<{text:string,level:number,pos:number}[]>([]);
 
   const saveTimer  = useRef<ReturnType<typeof setTimeout>|null>(null);
   const lastSaved  = useRef("");
@@ -173,11 +177,18 @@ export default function KathaEditor({
   const closeDD = ()=>setOpenDD(null);
 
   // ── Parse incoming content ────────────────────────────────────────────────
-  function parseContent():string {
-    if(!initialContent||initialContent==="<p><br></p>"||!initialContent.trim()) return "";
-    if(contentFormat==="json"){try{JSON.parse(initialContent);return initialContent;}catch{}}
+  const parseContent = useCallback((): any => {
+    if (!initialContent || initialContent === "<p><br></p>" || !initialContent.trim()) return "";
+    if (contentFormat === "json") {
+      try {
+        return typeof initialContent === "string" ? JSON.parse(initialContent) : initialContent;
+      } catch (e) {
+        console.error("Failed to parse ProseMirror JSON:", e);
+        return "";
+      }
+    }
     return initialContent;
-  }
+  }, [initialContent, contentFormat]);
 
   // ── Build extensions once ─────────────────────────────────────────────────
   const editor = useEditor({
@@ -204,6 +215,7 @@ export default function KathaEditor({
     content: parseContent(),
     editable: !readOnly,
     autofocus: !readOnly,
+    immediatelyRender: false,
     onUpdate:({editor})=>{
       const txt=editor.getText();
       setWordCount(txt.trim()?txt.trim().split(/\s+/).length:0);
@@ -215,6 +227,10 @@ export default function KathaEditor({
     onSelectionUpdate:({editor})=>{
       const sz=editor.getAttributes("textStyle").fontSize;
       if(sz) setCurFontSize(sz.replace(/pt|px/g,""));
+      const c = editor.getAttributes("textStyle").color;
+      if(c) setTextColor(c);
+      const h = editor.getAttributes("highlight").color;
+      if(h) setHlColor(h);
     },
   });
 
@@ -245,8 +261,35 @@ export default function KathaEditor({
       setCharCount(editor.storage.characterCount?.characters()??txt.length);
       setSaveStatus("saved");
     }
+
+    // Generate outline
+    if (editor) {
+      const headings: any[] = [];
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === "heading") {
+          headings.push({ text: node.textContent, level: node.attrs.level, pos });
+        }
+      });
+      setOutline(headings);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   },[editor, initialContent, contentFormat]);
+
+  // Update outline on local updates too
+  useEffect(() => {
+    if (!editor) return;
+    const upd = () => {
+      const hs: any[] = [];
+      editor.state.doc.descendants((node, pos) => {
+        if (node.type.name === "heading") {
+          hs.push({ text: node.textContent, level: node.attrs.level, pos });
+        }
+      });
+      setOutline(hs);
+    };
+    editor.on("update", upd);
+    return () => { editor.off("update", upd); };
+  }, [editor]);
 
   // Initial counts + lastSaved
   useEffect(()=>{
@@ -337,6 +380,41 @@ export default function KathaEditor({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 z-[200] flex flex-col" style={{background:"#f0f0f0"}}>
+      <style>{`
+        .ke-doc .ProseMirror {
+          outline: none;
+          min-height: 800px;
+          line-height: var(--ke-lh, 1.8);
+          font-size: var(--ke-fs, 11pt);
+        }
+        .ke-doc .ProseMirror p {
+          margin-bottom: 0.8em;
+          line-height: inherit;
+        }
+        .ke-doc .ProseMirror h1, .ke-doc .ProseMirror h2, .ke-doc .ProseMirror h3 {
+          color: ${M};
+          line-height: 1.3;
+          margin-top: 1.5em;
+          margin-bottom: 0.5em;
+        }
+        .ke-doc .ProseMirror ul, .ke-doc .ProseMirror ol {
+          padding-left: 1.5em;
+          margin-bottom: 1em;
+        }
+        .ke-doc .ProseMirror li p {
+          margin-bottom: 0.2em;
+        }
+        .ke-placeholder.is-empty::before {
+          content: attr(data-placeholder);
+          float: left;
+          color: #adb5bd;
+          pointer-events: none;
+          height: 0;
+        }
+        @media (max-width: 768px) {
+          .ke-doc .ProseMirror { font-size: 13pt; }
+        }
+      `}</style>
 
       {/* ══ CHROME ══════════════════════════════════════════════════════════ */}
       <div className={[
@@ -395,6 +473,17 @@ export default function KathaEditor({
                 </button>
               </Tip>
             </div>
+            {/* Outline toggle */}
+            <Tip label="Toggle outline">
+              <button 
+                onClick={() => setshowOutline(s => !s)}
+                className="w-8 h-8 flex items-center justify-center rounded transition-colors text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                style={showOutline ? { background: M, color: "white" } : {}}
+              >
+                <AlignLeft size={16} />
+              </button>
+            </Tip>
+
             {/* Save */}
             {!readOnly&&(
               <Tip label="Save" shortcut="Ctrl+S">
@@ -426,8 +515,8 @@ export default function KathaEditor({
 
         {/* ══ TOOLBAR ═══════════════════════════════════════════════════════ */}
         {!readOnly&&(
-          <div className="flex items-center h-9 px-2 gap-0.5 overflow-x-auto bg-white dark:bg-[#1f1f1f]"
-            style={{scrollbarWidth:"none"}}>
+          <div className="flex items-center h-9 px-2 gap-0.5 bg-white dark:bg-[#1f1f1f]">
+
 
             {/* Undo / Redo */}
             <TB onClick={()=>editor.chain().focus().undo().run()} disabled={!editor.can().undo()} label="Undo" shortcut="Ctrl+Z"><Undo2 size={14}/></TB>
@@ -535,14 +624,23 @@ export default function KathaEditor({
             <Sep/>
 
             {/* ── Text colour ── */}
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 flex items-center">
               <Tip label="Text colour">
-                <button onMouseDown={e=>{e.preventDefault();tog("textcolor");}}
-                  className="inline-flex flex-col items-center justify-center h-7 w-7 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer pb-0.5">
+                <button 
+                  onMouseDown={e=>{e.preventDefault(); 
+                    editor.chain().focus().setColor(textColor).run();
+                  }}
+                  className="inline-flex flex-col items-center justify-center h-7 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer pb-0.5">
                   <Palette size={13} className="text-gray-600 dark:text-gray-300 mt-0.5"/>
                   <div className="w-4 h-[3px] rounded-sm mt-0.5" style={{background:curColor}}/>
                 </button>
               </Tip>
+              <button 
+                onMouseDown={e=>{e.preventDefault(); tog("textcolor");}}
+                className="h-7 w-4 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400">
+                <ChevronDown size={10}/>
+              </button>
+              
               {openDD==="textcolor"&&(
                 <DD onClose={closeDD} width={192}>
                   <DDLabel>Text colour</DDLabel>
@@ -550,7 +648,11 @@ export default function KathaEditor({
                     <div className="grid grid-cols-5 gap-1.5 mb-2">
                       {TEXT_COLORS.map(({c,n})=>(
                         <Tip key={c} label={n}>
-                          <button onMouseDown={e=>{e.preventDefault();editor.chain().focus().setColor(c).run();closeDD();}}
+                          <button onMouseDown={e=>{e.preventDefault(); 
+                            editor.chain().focus().setColor(c).run();
+                            setTextColor(c); 
+                            closeDD();
+                          }}
                             className="w-6 h-6 rounded-sm border border-gray-200 dark:border-gray-600 hover:scale-110 transition-transform shadow-sm cursor-pointer"
                             style={{background:c}}/>
                         </Tip>
@@ -566,15 +668,27 @@ export default function KathaEditor({
             </div>
 
             {/* ── Highlight ── */}
-            <div className="relative shrink-0">
+            <div className="relative shrink-0 flex items-center">
               <Tip label="Highlight">
-                <button onMouseDown={e=>{e.preventDefault();tog("highlight");}}
-                  className="inline-flex flex-col items-center justify-center h-7 w-7 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer pb-0.5"
+                <button onMouseDown={e=>{e.preventDefault(); 
+                  if(editor.isActive("highlight")) {
+                    editor.chain().focus().unsetHighlight().run();
+                  } else {
+                    editor.chain().focus().setHighlight({color:hlColor}).run();
+                  }
+                }}
+                  className="inline-flex flex-col items-center justify-center h-7 px-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer pb-0.5"
                   style={isHighlighted?{background:`${M}18`}:{}}>
                   <Highlighter size={13} className="text-gray-600 dark:text-gray-300 mt-0.5"/>
-                  <div className="w-4 h-[3px] rounded-sm mt-0.5 bg-yellow-300"/>
+                  <div className="w-4 h-[3px] rounded-sm mt-0.5" style={{background:hlColor}}/>
                 </button>
               </Tip>
+              <button 
+                onMouseDown={e=>{e.preventDefault(); tog("highlight");}}
+                className="h-7 w-4 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400">
+                <ChevronDown size={10}/>
+              </button>
+
               {openDD==="highlight"&&(
                 <DD onClose={closeDD} width={192}>
                   <DDLabel>Highlight colour</DDLabel>
@@ -582,7 +696,11 @@ export default function KathaEditor({
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       {HIGHLIGHT_COLORS.map(({c,n})=>(
                         <Tip key={c} label={n}>
-                          <button onMouseDown={e=>{e.preventDefault();editor.chain().focus().setHighlight({color:c}).run();closeDD();}}
+                          <button onMouseDown={e=>{e.preventDefault();
+                            editor.chain().focus().setHighlight({color:c}).run();
+                            setHlColor(c);
+                            closeDD();
+                          }}
                             className="w-6 h-6 rounded-sm border border-gray-200 dark:border-gray-600 hover:scale-110 transition-transform shadow-sm cursor-pointer"
                             style={{background:c}}/>
                         </Tip>
@@ -690,23 +808,70 @@ export default function KathaEditor({
       </div>
 
       {/* ══ PAGE CANVAS ═══════════════════════════════════════════════════ */}
-      <div className="flex-1 overflow-y-auto" style={{background:"#e8e8e8"}} onClick={closeDD}>
-        <div style={{
-          width:816,
-          marginLeft:"auto",
-          marginRight:"auto",
-          marginTop:32,
-          marginBottom:64,
-          background:"white",
-          boxShadow:"0 1px 3px rgba(0,0,0,0.16),0 4px 16px rgba(0,0,0,0.08)",
-          minHeight:1056,
-          padding:"96px 96px 120px",
-          transformOrigin:"top center",
-          transform:`scale(${zoom/100})`,
-          ...(zoom<100?{marginBottom:`${64-(1-zoom/100)*1056}px`}:{}),
-        }}>
-          <div ref={editorArea} className="ke-doc">
-            <EditorContent editor={editor}/>
+      <div className="flex-1 flex min-h-0 bg-[#e8e8e8]" onClick={closeDD}>
+        
+        {/* Outline Sidebar */}
+        {showOutline && (
+          <div className="w-64 shrink-0 bg-white border-r border-gray-200 shadow-sm flex flex-col pt-4 overflow-y-auto">
+            <h3 className="px-4 mb-4 text-[10px] uppercase tracking-widest font-bold text-gray-400">Outline</h3>
+            <div className="flex flex-col px-2 gap-0.5">
+              {outline.map((h, i) => (
+                <button 
+                  key={i}
+                  onMouseDown={(e) => { e.preventDefault(); editor.commands.focus(h.pos); }}
+                  className="w-full text-left px-3 py-1.5 rounded text-[11px] font-medium transition-colors hover:bg-gray-50 text-gray-700 truncate"
+                  style={{ paddingLeft: `${(h.level - 1) * 12 + 12}px` }}
+                >
+                  {h.text || "(Empty heading)"}
+                </button>
+              ))}
+              {outline.length === 0 && (
+                <p className="px-4 text-[11px] italic text-gray-400">No headings yet</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto relative">
+          {/* Bubble Menu */}
+          {editor && !readOnly && (
+            <BubbleMenu editor={editor} tippyOptions={{ duration: 100 }}>
+              <div className="flex items-center bg-gray-900 text-white rounded-lg shadow-2xl px-1.5 py-1 gap-1">
+                <button onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
+                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("bold") ? "text-amber-400" : ""}`}><Bold size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); }}
+                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("italic") ? "text-amber-400" : ""}`}><Italic size={14}/></button>
+                <button onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleUnderline().run(); }}
+                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("underline") ? "text-amber-400" : ""}`}><UIcon size={14}/></button>
+                <div className="w-px h-4 bg-gray-700 mx-0.5"/>
+                <button onMouseDown={e => { e.preventDefault(); setOpenDD("textcolor"); }}
+                  className="p-1.5 rounded hover:bg-gray-800"><Palette size={14}/></button>
+              </div>
+            </BubbleMenu>
+          )}
+
+          <div style={{
+            width: 816,
+            marginLeft: "auto",
+            marginRight: "auto",
+            marginTop: 32,
+            marginBottom: 64,
+            background: "white",
+            boxShadow: "0 1px 3px rgba(0,0,0,0.16),0 4px 16px rgba(0,0,0,0.08)",
+            minHeight: 1056,
+            padding: "96px 96px 120px",
+            transformOrigin: "top center",
+            transform: `scale(${zoom / 100})`,
+            ...(zoom < 100 ? { marginBottom: `${64 - (1 - zoom / 100) * 1056}px` } : {}),
+          }}>
+            <div ref={editorArea} className="ke-doc">
+              <EditorContent 
+                editor={editor}
+                style={{ 
+                  ["--ke-lh" as any]: lineHeight,
+                }} 
+              />
+            </div>
           </div>
         </div>
       </div>
