@@ -76,7 +76,7 @@ export const KathaCard = ({
       <div className="relative aspect-[3/4.2] rounded-[24px] overflow-hidden bg-white dark:bg-slate-950 border-2 border-slate-50 dark:border-slate-800 transition-all duration-700 mb-4 md:mb-6 group-hover:border-maroon/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
         {item.coverImage ? (
           <img
-            src={process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', item.coverImage) : `http://localhost:5000${item.coverImage}`}
+            src={item.coverImage.startsWith('http') ? item.coverImage : (process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', item.coverImage) : `http://localhost:5000${item.coverImage}`)}
             alt={title}
             className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:blur-2xl group-hover:scale-110 group-hover:opacity-0 ${isMobileExposed ? 'blur-2xl scale-110 opacity-0' : ''}`}
           />
