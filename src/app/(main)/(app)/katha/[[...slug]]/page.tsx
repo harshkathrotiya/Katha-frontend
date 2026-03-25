@@ -38,7 +38,8 @@ import {
   Heart,
   Pin,
   ArrowUpAZ,
-  ArrowDownZA
+  ArrowDownZA,
+  EyeOff
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -205,6 +206,7 @@ export default function KathaCollectionPage() {
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#8b1D1D");
   const [isCreatingTag, setIsCreatingTag] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToast({ message, type });
@@ -892,6 +894,29 @@ export default function KathaCollectionPage() {
     }
   };
 
+  const handleToggleHide = async (item: any) => {
+    const isVisible = !item.isHidden;
+    const mapper = (it: any) => it.id === item.id ? { ...it, isHidden: isVisible } : it;
+
+    // Optimistic Update
+    setKathaList(prev => prev.map(mapper));
+    setMixedContents(prev => prev.map(mapper));
+    setFilteredContents(prev => prev.map(mapper));
+
+    try {
+      const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
+      await api.post('/hide/toggle', { itemId: item.id, itemType });
+      contentCache.delete(slug.join('/') || 'root');
+      showToast(isVisible ? "Item Hidden" : "Item Visible", "success");
+    } catch (err) {
+      const rollback = (it: any) => it.id === item.id ? { ...it, isHidden: !isVisible } : it;
+      setKathaList(prev => prev.map(rollback));
+      setMixedContents(prev => prev.map(rollback));
+      setFilteredContents(prev => prev.map(rollback));
+      showToast("Failed to update visibility", "error");
+    }
+  };
+
   const handleOpenTagModal = async (item: any) => {
     setActiveItem(item);
     setIsTagModalOpen(true);
@@ -954,7 +979,8 @@ export default function KathaCollectionPage() {
   };
 
   const getSortedItems = (items: any[]) => {
-    return [...items].sort((a, b) => {
+    const filtered = items.filter(it => showHidden || !it.isHidden);
+    return [...filtered].sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
       let comparison = 0;
@@ -1085,6 +1111,14 @@ export default function KathaCollectionPage() {
                 <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1.5 text-slate-400 hover:text-maroon transition-colors">
                   {sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
                 </button>
+                <div className="w-px h-3 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+                <button 
+                  onClick={() => setShowHidden(prev => !prev)} 
+                  className={`p-1.5 transition-colors ${showHidden ? 'text-maroon' : 'text-slate-400 hover:text-maroon'}`}
+                  title={showHidden ? "Hide Invisible Items" : "Show Hidden Items"}
+                >
+                  {showHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                </button>
               </div>
 
               <div className="flex gap-2 shrink-0">
@@ -1145,6 +1179,7 @@ export default function KathaCollectionPage() {
                     onUser={() => handleShareClick(item)}
                     onMove={() => handleOpenMoveModal(item)}
                     onEdit={() => openInputModal('edit', item)}
+                    onHide={() => handleToggleHide(item)}
                     onDelete={() => {
                       setItemToDelete(item);
                       setIsConfirmModalOpen(true);
@@ -1197,6 +1232,14 @@ export default function KathaCollectionPage() {
                 <button onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')} className="p-1.5 text-slate-400 hover:text-maroon transition-colors">
                   {sortOrder === 'asc' ? <ArrowUpAZ size={13} /> : <ArrowDownZA size={13} />}
                 </button>
+                <div className="w-px h-3 bg-slate-300 dark:bg-slate-700 mx-0.5" />
+                <button 
+                  onClick={() => setShowHidden(prev => !prev)} 
+                  className={`p-1.5 transition-colors ${showHidden ? 'text-maroon' : 'text-slate-400 hover:text-maroon'}`}
+                  title={showHidden ? "Show Hidden" : "Hide Hidden"}
+                >
+                  {showHidden ? <Eye size={13} /> : <EyeOff size={13} />}
+                </button>
               </div>
 
               <button
@@ -1226,6 +1269,7 @@ export default function KathaCollectionPage() {
                   onMoveDown={() => handleReorder(item, 'down')}
                   onMove={() => handleOpenMoveModal({ ...item, type: 'folder' })}
                   onToggleFav={() => handeToggleFav(item)}
+                  onToggleHide={() => handleToggleHide({ ...item, type: 'folder' })}
                   onTag={() => handleOpenTagModal({ ...item, type: 'folder' })}
                   onPin={() => handleTogglePin({ ...item, type: 'folder' })}
                 />

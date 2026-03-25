@@ -30,7 +30,8 @@ export const KathaCard = ({
   onToggleFav,
   onTag,
   onPin,
-  onMove
+  onMove,
+  onToggleHide
 }: {
   item: any;
   onOpen: () => void;
@@ -42,6 +43,7 @@ export const KathaCard = ({
   onToggleFav: () => void;
   onTag: () => void;
   onPin: () => void;
+  onToggleHide: () => void;
 }) => {
   const [isMobileExposed, setIsMobileExposed] = React.useState(false);
   const title = item.name;
@@ -59,6 +61,7 @@ export const KathaCard = ({
       }, bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300"
     },
     { Icon: Pin, label: isPinned ? "Unpin" : "Pin", onClick: onPin, bg: isPinned ? "bg-maroon text-white" : "bg-slate-100 dark:bg-slate-800", text: isPinned ? "text-white" : "text-slate-700 dark:text-slate-200" },
+    { Icon: EyeOff, label: item.isHidden ? "Unhide" : "Hide", onClick: onToggleHide, bg: item.isHidden ? "bg-maroon text-white" : "bg-slate-50 dark:bg-slate-900", text: item.isHidden ? "text-white" : "text-slate-600 dark:text-slate-400" },
     { Icon: Download, label: "Download", onClick: () => { }, bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300" },
     {
       Icon: Share2, label: "Share", onClick: () => {

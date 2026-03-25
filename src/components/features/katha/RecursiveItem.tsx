@@ -33,6 +33,7 @@ export const RecursiveItem = ({
   onMove,
   onEdit,
   onDelete,
+  onHide,
   onClick
 }: {
   index: number;
@@ -46,6 +47,7 @@ export const RecursiveItem = ({
   onMove: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onHide: () => void;
   onClick: () => void;
 }) => {
   const type = item.type;
@@ -106,7 +108,7 @@ export const RecursiveItem = ({
           <div className="flex items-center gap-1 px-0.5 md:px-1">
             {/* User Requested Sequence: Bookmark, Hide, Tag, Copy, Pin, Download, Share, User Share */}
             <MiniAction Icon={Heart} label="Bookmark" onClick={onFav} color={isFav ? "text-amber-500" : "text-slate-400 hover:text-amber-500"} />
-            <MiniAction Icon={EyeOff} label="Hide" onClick={() => {}} color="text-slate-400 hover:text-slate-600" />
+            <MiniAction Icon={item.isHidden ? Eye : EyeOff} label={item.isHidden ? "Unhide" : "Hide"} onClick={onHide} color={item.isHidden ? "text-maroon" : "text-slate-400 hover:text-slate-600"} />
             <MiniAction Icon={Tag} label="Tag" onClick={onTag} color="text-indigo-500 hover:text-indigo-600" />
             <MiniAction Icon={Copy} label="Copy Name" onClick={() => navigator.clipboard.writeText(title)} color="text-blue-500 hover:text-blue-600" />
           </div>
