@@ -38,7 +38,8 @@ import {
   Heart,
   Pin,
   ArrowUpAZ,
-  ArrowDownZA
+  ArrowDownZA,
+  EyeOff
 } from "lucide-react";
 
 import { api } from "@/lib/api";
@@ -143,6 +144,7 @@ export default function GranthCollectionPage() {
   const slug = params?.slug as string[] || [];
 
   const [loading, setLoading] = useState(true);
+  const [showHidden, setShowHidden] = useState(false);
   const [kathaList, setKathaList] = useState<any[]>([]);
   const [mixedContents, setMixedContents] = useState<any[]>([]);
   const [filteredContents, setFilteredContents] = useState<any[]>([]);
@@ -869,6 +871,29 @@ export default function GranthCollectionPage() {
     }
   };
 
+  const handleToggleHide = async (item: any) => {
+    const isVisible = !item.isHidden;
+    const mapper = (it: any) => it.id === item.id ? { ...it, isHidden: isVisible } : it;
+
+    // Optimistic Update
+    setKathaList(prev => prev.map(mapper));
+    setMixedContents(prev => prev.map(mapper));
+    setFilteredContents(prev => prev.map(mapper));
+
+    try {
+      const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
+      await api.post('/hide/toggle', { itemId: item.id, itemType });
+      contentCache.delete(slug.join('/') || 'root');
+      showToast(isVisible ? "Item Hidden" : "Item Visible", "success");
+    } catch (err) {
+      const rollback = (it: any) => it.id === item.id ? { ...it, isHidden: !isVisible } : it;
+      setKathaList(prev => prev.map(rollback));
+      setMixedContents(prev => prev.map(rollback));
+      setFilteredContents(prev => prev.map(rollback));
+      showToast("Failed to update visibility", "error");
+    }
+  };
+
   const handleOpenTagModal = async (item: any) => {
     setActiveItem(item);
     setIsTagModalOpen(true);
@@ -1064,6 +1089,14 @@ export default function GranthCollectionPage() {
                 </button>
               </div>
 
+              <button
+                onClick={() => setShowHidden(!showHidden)}
+                className={`p-2 rounded-xl border transition-all ${showHidden ? 'bg-maroon text-white border-maroon' : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800'}`}
+                title={showHidden ? "Hide Hidden Items" : "Show Hidden Items"}
+              >
+                {showHidden ? <Eye size={16} /> : <EyeOff size={16} />}
+              </button>
+
               <div className="flex gap-2 shrink-0">
                 <button
                   onClick={() => openInputModal('create_folder')}
@@ -1087,7 +1120,7 @@ export default function GranthCollectionPage() {
           <div className="p-4 md:px-10 md:py-4 max-w-[1700px] mx-auto w-full space-y-4 md:space-y-6">
 
             <div className="space-y-4">
-              {getSortedItems(filteredContents).length === 0 ? (
+              {getSortedItems(filteredContents.filter(it => showHidden ? true : !it.isHidden)).length === 0 ? (
                 <div className="py-20 flex flex-col items-center justify-center text-center space-y-4 border-2 border-dashed border-slate-100 dark:border-slate-800 rounded-[40px]">
                   <div className="w-16 h-16 bg-slate-50 dark:bg-slate-950 rounded-3xl flex items-center justify-center text-slate-200 dark:text-slate-800">
                     <FolderOpen size={32} />
@@ -1098,7 +1131,7 @@ export default function GranthCollectionPage() {
                   </div>
                 </div>
               ) : (
-                getSortedItems(filteredContents).map((item, idx) => (
+                getSortedItems(filteredContents.filter(it => showHidden ? true : !it.isHidden)).map((item, idx) => (
                   <RecursiveItem
                     key={item.id}
                     index={idx + 1}
@@ -1126,6 +1159,7 @@ export default function GranthCollectionPage() {
                       setItemToDelete(item);
                       setIsConfirmModalOpen(true);
                     }}
+                    onHide={() => handleToggleHide(item)}
                     onClick={() => {
                       if (item.type === 'folder') {
                         router.push(`/granth/${slug.join('/')}/${item.name}`);
@@ -1174,6 +1208,12 @@ export default function GranthCollectionPage() {
                 </button>
               </div>
               <button
+                onClick={() => setShowHidden(!showHidden)}
+                className={`p-2 rounded-lg border transition-all ${showHidden ? 'bg-maroon text-white border-maroon' : 'bg-white dark:bg-slate-900 text-slate-400 border-slate-200 dark:border-slate-800'}`}
+              >
+                {showHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+              </button>
+              <button
                 onClick={() => openInputModal('create_collection')}
                 className="flex items-center gap-1.5 px-4 py-2 bg-maroon hover:bg-[#6e171b] text-white rounded-lg font-bold text-xs shadow-lg shadow-maroon/20 hover:-translate-y-0.5 active:translate-y-0 transition-all shrink-0"
               >
@@ -1186,7 +1226,7 @@ export default function GranthCollectionPage() {
           <div className="px-5 md:px-10 py-6 md:py-10 max-w-[1700px] mx-auto w-full">
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-x-6 md:gap-x-8 gap-y-12 md:gap-y-16">
-              {getSortedItems(filteredContents).map((item, idx) => (
+              {getSortedItems(filteredContents.filter(it => showHidden ? true : !it.isHidden)).map((item, idx) => (
                 <KathaCard
                   key={item.id}
                   item={item}
@@ -1202,6 +1242,7 @@ export default function GranthCollectionPage() {
                   onToggleFav={() => handeToggleFav(item)}
                   onTag={() => handleOpenTagModal({ ...item, type: 'folder' })}
                   onPin={() => handleTogglePin({ ...item, type: 'folder' })}
+                  onToggleHide={() => handleToggleHide({ ...item, type: 'folder' })}
                 />
               ))}
             </div>
