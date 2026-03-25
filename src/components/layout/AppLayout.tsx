@@ -123,6 +123,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <p className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight truncate">{user?.name}</p>
                     <p className="text-[10px] text-slate-400 truncate">{user?.email}</p>
                   </div>
+                  <Link
+                    href="/settings"
+                    onClick={() => setProfileOpen(false)}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <User size={13} />
+                    <span>Profile & Settings</span>
+                  </Link>
+                  <div className="h-px bg-slate-50 dark:bg-slate-800 my-1" />
                   <button
                     onClick={() => { setProfileOpen(false); logout(); }}
                     className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-slate-600 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-600 transition-colors"
@@ -183,6 +192,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               >
                 <Heart size={16} />
                 <span>Favourites</span>
+              </Link>
+              <Link
+                href="/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all
+                  ${isActive("/settings")
+                    ? "bg-maroon text-white shadow-lg shadow-maroon/20"
+                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+                  }`}
+              >
+                <User size={16} />
+                <span>Profile & Settings</span>
               </Link>
             </nav>
           </div>

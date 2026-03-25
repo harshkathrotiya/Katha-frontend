@@ -17,7 +17,7 @@ export function Button({
     const baseStyles = "inline-flex items-center justify-center rounded-lg font-medium transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
 
     const variants = {
-        primary: "bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500 shadow-lg hover:shadow-indigo-500/30",
+        primary: "bg-maroon text-white hover:bg-[#6e171b] focus:ring-maroon/50 shadow-lg hover:shadow-maroon/20",
         maroon: "bg-maroon text-white hover:opacity-90 focus:ring-maroon shadow-lg",
         gray: "bg-gray-btn text-white hover:opacity-90 focus:ring-slate-400 shadow-md",
         secondary: "bg-slate-800 text-white hover:bg-slate-900 focus:ring-slate-700",
