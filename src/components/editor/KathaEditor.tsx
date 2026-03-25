@@ -36,6 +36,7 @@ interface KathaEditorProps {
   fileName: string;
   initialContent: string;
   contentFormat?: "html" | "json";
+  fileUpdatedAt?: string | null;  // ISO string from server — used to detect stale drafts
   onSave: (content: string, format: "json", plainText: string) => Promise<void>;
   onClose: () => void;
   readOnly?: boolean;
@@ -152,7 +153,7 @@ function DDLabel({children}:{children:string}) {
 // ═════════════════════════════════════════════════════════════════════════════
 export default function KathaEditor({
   fileId, fileName, initialContent, contentFormat="html",
-  onSave, onClose, readOnly=false,
+  fileUpdatedAt, onSave, onClose, readOnly=false,
 }:KathaEditorProps) {
 
   const [saveStatus,  setSaveStatus]  = useState<SaveStatus>("saved");
@@ -176,6 +177,7 @@ export default function KathaEditor({
   const [sidebarTab,   setSidebarTab]  = useState<"chapters"|"outline">("chapters");
   const [chapterRenameId, setChapterRenameId] = useState("");
   const [chapterRenameValue, setChapterRenameValue] = useState("");
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
 
   const chaptersRef = useRef(chapters);
   useEffect(() => { chaptersRef.current = chapters; }, [chapters]);
@@ -195,10 +197,23 @@ export default function KathaEditor({
     
     const initData = async () => {
       let data;
+      let usedDraft = false;
       if (typeof window !== "undefined") {
         try {
-          const draft = await localforage.getItem<string>(`katha-draft-${fileId}`);
-          if (draft) data = JSON.parse(draft);
+          const rawDraft = await localforage.getItem<string>(`katha-draft-${fileId}`);
+          if (rawDraft) {
+            const draft = JSON.parse(rawDraft);
+            // Only use the draft if it is newer than the server content.
+            // drafts store a _savedAt timestamp (ms). The katha page passes
+            // editingFile.updatedAt via initialContent's parsed timestamp.
+            // If the draft has no timestamp, prefer it (crash-recovery intent).
+            const draftTs = draft._savedAt ?? Infinity;
+            const serverTs = fileUpdatedAt ? new Date(fileUpdatedAt).getTime() : 0;
+            if (draftTs >= serverTs) {
+              data = draft;
+              usedDraft = true;
+            }
+          }
         } catch (e) { console.error("IDB Cache error", e); }
       }
 
@@ -226,6 +241,8 @@ export default function KathaEditor({
         setChapters([c]);
         setActiveChapterId(c.id);
       }
+      // Show recovery banner if draft was loaded
+      if (usedDraft) setShowDraftBanner(true);
     };
     initData();
     return () => { unmounted = true; };
@@ -273,7 +290,7 @@ export default function KathaEditor({
         c.id === activeChapterRef.current ? { ...c, content: json } : c
       );
       setChapters(newChapters);
-      const saveData = { isChaptered: true, chapters: newChapters };
+      const saveData = { isChaptered: true, chapters: newChapters, _savedAt: Date.now() };
 
       // Instant Offline Draft protection via IndexedDB (handles gigabytes of data)
       if (typeof window !== "undefined") {
@@ -541,6 +558,46 @@ export default function KathaEditor({
             )}
           </div>
         </div>
+
+        {/* ── Draft recovery banner ── */}
+        {showDraftBanner && (
+          <div className="flex items-center justify-between px-4 py-2 text-sm font-medium text-white"
+            style={{background: "#7c2d2d"}}>
+            <span>⚠️ Unsaved draft recovered — your last unsaved changes have been restored.</span>
+            <div className="flex items-center gap-2 shrink-0 ml-4">
+              <button
+                onClick={() => setShowDraftBanner(false)}
+                className="px-3 py-1 rounded text-xs font-bold bg-white/20 hover:bg-white/30 transition-colors">
+                Keep draft
+              </button>
+              <button
+                onClick={async () => {
+                  // Discard draft — reload from initialContent
+                  if (typeof window !== "undefined") {
+                    try { await localforage.removeItem(`katha-draft-${fileId}`); } catch {}
+                  }
+                  setShowDraftBanner(false);
+                  // Re-parse server content
+                  if (editor && initialContent && initialContent.trim()) {
+                    try {
+                      const parsed = contentFormat === "json" ? JSON.parse(initialContent) : initialContent;
+                      if (parsed.isChaptered && parsed.chapters) {
+                        setChapters(parsed.chapters);
+                        setActiveChapterId(parsed.chapters[0]?.id);
+                      } else {
+                        const ch = { id: Math.random().toString(36).slice(2), title: "Chapter 1", content: parsed };
+                        setChapters([ch]);
+                        setActiveChapterId(ch.id);
+                      }
+                    } catch {}
+                  }
+                }}
+                className="px-3 py-1 rounded text-xs font-bold bg-white/10 hover:bg-white/20 transition-colors border border-white/30">
+                Discard draft
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Search row ── */}
         {showSearch&&(
@@ -862,15 +919,15 @@ export default function KathaEditor({
         {showOutline && (
           <div className="w-64 shrink-0 bg-white border-r border-gray-200 shadow-sm flex flex-col overflow-hidden">
             <div className="flex border-b border-gray-100">
-              <button onClick={() => setSidebarTab("chapters")} className={`flex-1 py-3 text-xs font-semibold ${sidebarTab==="chapters"?"text-amber-700 border-b-2 border-amber-700":"text-gray-500 hover:text-gray-700"}`}>Chapters</button>
-              <button onClick={() => setSidebarTab("outline")} className={`flex-1 py-3 text-xs font-semibold ${sidebarTab==="outline"?"text-amber-700 border-b-2 border-amber-700":"text-gray-500 hover:text-gray-700"}`}>Outline</button>
+              <button onClick={() => setSidebarTab("chapters")} className={`flex-1 py-3 text-xs font-semibold ${sidebarTab==="chapters"?"border-b-2":"text-gray-500 hover:text-gray-700"}`}>Chapters</button>
+              <button onClick={() => setSidebarTab("outline")} className={`flex-1 py-3 text-xs font-semibold ${sidebarTab==="outline"?"border-b-2":"text-gray-500 hover:text-gray-700"}`}>Outline</button>
             </div>
             
             <div className="flex-1 overflow-y-auto px-2 py-4" style={{scrollbarWidth:"none"}}>
               {sidebarTab === "chapters" && (
                 <div className="flex flex-col gap-1">
                   {chapters.map(ch => (
-                    <div key={ch.id} className={`group flex items-center justify-between px-2 py-1.5 rounded transition-colors ${ch.id === activeChapterId ? 'bg-amber-50 text-amber-900 font-medium' : 'hover:bg-gray-50 text-gray-700'}`}>
+                    <div key={ch.id} className={`group flex items-center justify-between px-2 py-1.5 rounded transition-colors ${ch.id === activeChapterId ? 'font-semibold' : 'hover:bg-gray-50 text-gray-700'}`}>
                       {chapterRenameId === ch.id ? (
                         <input 
                           autoFocus
@@ -886,7 +943,7 @@ export default function KathaEditor({
                               setChapterRenameId("");
                             }
                           }}
-                          className="flex-1 text-[12px] bg-white border border-amber-200 rounded px-1 min-w-0 focus:outline-none"
+                          className="flex-1 text-[12px] bg-white border rounded px-1 min-w-0 focus:outline-none"
                         />
                       ) : (
                         <button className="flex-1 text-left text-[12px] truncate" onClick={() => setActiveChapterId(ch.id)}>
@@ -896,7 +953,7 @@ export default function KathaEditor({
                       
                       {chapterRenameId !== ch.id && !readOnly && (
                         <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 shrink-0 ml-2">
-                          <button onClick={() => { setChapterRenameId(ch.id); setChapterRenameValue(ch.title); }} className="p-1 text-gray-400 hover:text-amber-600"><Type size={12}/></button>
+                          <button onClick={() => { setChapterRenameId(ch.id); setChapterRenameValue(ch.title); }} className="p-1 text-gray-400 hover:text-red-800"><Type size={12}/></button>
                           {chapters.length > 1 && (
                             <button onClick={() => {
                               const nc = chapters.filter(c => c.id !== ch.id);
@@ -927,8 +984,11 @@ export default function KathaEditor({
                       key={i}
                       onMouseDown={(e) => { 
                         e.preventDefault(); 
-                        editor.chain().focus(h.pos).run();
-                        const dom = editor.view.nodeDOM(h.pos) as HTMLElement;
+                        // Tiptap 3: focus() doesn't take a position — use setTextSelection
+                        editor.commands.focus();
+                        editor.commands.setTextSelection(h.pos);
+                        // Scroll the heading into view
+                        const dom = editor.view.nodeDOM(h.pos) as HTMLElement | null;
                         if (dom) dom.scrollIntoView({ behavior: "smooth", block: "start" });
                       }}
                       className="w-full text-left px-3 py-1.5 rounded text-[11px] font-medium transition-colors hover:bg-gray-50 text-gray-700 truncate"
@@ -952,11 +1012,11 @@ export default function KathaEditor({
             <BubbleMenu editor={editor}>
               <div className="flex items-center bg-gray-900 text-white rounded-lg shadow-2xl px-1.5 py-1 gap-1">
                 <button onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
-                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("bold") ? "text-amber-400" : ""}`}><Bold size={14}/></button>
+                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("bold") ? "text-red-300" : ""}`}><Bold size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); }}
-                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("italic") ? "text-amber-400" : ""}`}><Italic size={14}/></button>
+                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("italic") ? "text-red-300" : ""}`}><Italic size={14}/></button>
                 <button onMouseDown={e => { e.preventDefault(); editor.chain().focus().toggleUnderline().run(); }}
-                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("underline") ? "text-amber-400" : ""}`}><UIcon size={14}/></button>
+                  className={`p-1.5 rounded hover:bg-gray-800 ${editor.isActive("underline") ? "text-red-300" : ""}`}><UIcon size={14}/></button>
                 <div className="w-px h-4 bg-gray-700 mx-0.5"/>
                 <button onMouseDown={e => { e.preventDefault(); tog("textcolor"); }}
                   className="p-1.5 rounded hover:bg-gray-800"><Palette size={14}/></button>

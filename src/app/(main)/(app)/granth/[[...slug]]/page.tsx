@@ -1393,6 +1393,7 @@ export default function GranthCollectionPage() {
           fileName={editingFile.name || editingFile.title || "Untitled"}
           initialContent={editorContent}
           contentFormat={editorFormat}
+          fileUpdatedAt={editingFile?.updatedAt ?? null}
           onSave={handleSaveFile}
           onClose={() => {
             setIsEditorOpen(false);
