@@ -28,7 +28,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Tokens live in HttpOnly cookies — the browser sends them automatically.
             // We simply call the profile endpoint; if the cookie is missing/expired
             // the server returns 401 and api.ts redirects to /login.
-            const response = await api.get("/user/profile");
+            // Using a cache-buster + no-store to prevent Next.js from aggressively caching the old user's profile JSON across logouts.
+            const response = await api.get(`/user/profile?_t=${Date.now()}`, {
+                cache: "no-store",
+                headers: {
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache"
+                }
+            });
             if (response.success && response.data) {
                 setUser({
                     id: response.data.id,
