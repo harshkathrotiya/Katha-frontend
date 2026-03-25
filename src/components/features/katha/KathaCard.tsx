@@ -74,17 +74,27 @@ export const KathaCard = ({
       onClick={() => setIsMobileExposed(!isMobileExposed)}
     >
       <div className="relative aspect-[3/4.2] rounded-[24px] overflow-hidden bg-white dark:bg-slate-950 border-2 border-slate-50 dark:border-slate-800 transition-all duration-700 mb-4 md:mb-6 group-hover:border-maroon/30 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-maroon/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 group-hover:opacity-100 transition-opacity" />
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -ml-16 -mb-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+        {item.coverImage ? (
+          <img
+            src={process.env.NEXT_PUBLIC_API_URL ? process.env.NEXT_PUBLIC_API_URL.replace('/api', item.coverImage) : `http://localhost:5000${item.coverImage}`}
+            alt={title}
+            className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:blur-2xl group-hover:scale-110 group-hover:opacity-0 ${isMobileExposed ? 'blur-2xl scale-110 opacity-0' : ''}`}
+          />
+        ) : (
+          <>
+            <div className="absolute top-0 right-0 w-32 h-32 bg-maroon/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-50 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-amber-500/5 rounded-full blur-3xl -ml-16 -mb-16 opacity-0 group-hover:opacity-100 transition-opacity" />
 
-        <div className={`absolute inset-0 flex flex-col items-center justify-center p-8 text-center transition-all duration-700 group-hover:blur-2xl group-hover:scale-110 group-hover:opacity-0 ${isMobileExposed ? 'blur-2xl scale-110 opacity-0' : ''}`}>
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-maroon/10 flex items-center justify-center mb-6 relative">
-            <div className="absolute inset-0 rounded-full border border-maroon/20 animate-ping opacity-20" />
-            <div className="w-4 h-4 bg-maroon rounded-full shadow-[0_0_20px_rgba(139,29,29,0.4)]" />
-          </div>
-          <div className="text-maroon font-black text-2xl md:text-3xl tracking-tighter font-outfit uppercase leading-[0.9] mb-2">Satsang</div>
-          <div className="text-slate-400 dark:text-slate-500 font-bold text-[9px] md:text-[10px] uppercase tracking-[0.4em]">SGVP Katha</div>
-        </div>
+            <div className={`absolute inset-0 flex flex-col items-center justify-center p-8 text-center transition-all duration-700 group-hover:blur-2xl group-hover:scale-110 group-hover:opacity-0 ${isMobileExposed ? 'blur-2xl scale-110 opacity-0' : ''}`}>
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-maroon/10 flex items-center justify-center mb-6 relative">
+                <div className="absolute inset-0 rounded-full border border-maroon/20 animate-ping opacity-20" />
+                <div className="w-4 h-4 bg-maroon rounded-full shadow-[0_0_20px_rgba(139,29,29,0.4)]" />
+              </div>
+              <div className="text-maroon font-black text-2xl md:text-3xl tracking-tighter font-outfit uppercase leading-[0.9] mb-2">Satsang</div>
+              <div className="text-slate-400 dark:text-slate-500 font-bold text-[9px] md:text-[10px] uppercase tracking-[0.4em]">SGVP Katha</div>
+            </div>
+          </>
+        )}
 
         <div className={`absolute bottom-0 left-0 w-full bg-maroon dark:bg-[#a32b2b] py-3.5 px-3 text-center z-10 shadow-[0_-15px_30px_rgba(0,0,0,0.2)] transition-all duration-700 group-hover:translate-y-full group-hover:opacity-0 ${isMobileExposed ? 'translate-y-full opacity-0' : ''}`}>
           <span className="text-white text-[10px] md:text-xs font-black tracking-[0.1em] uppercase truncate block">{title}</span>
@@ -133,7 +143,7 @@ export const KathaCard = ({
               className="w-full py-2 bg-white dark:bg-slate-900 text-maroon dark:text-red-400 border-2 border-maroon/10 hover:border-maroon/30 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95 shadow-sm shadow-black/5 duration-500"
             >
               <Edit size={12} className="group-hover:rotate-12 transition-transform" />
-              <span>Rename</span>
+              <span>Edit</span>
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); onOpen(); }}
@@ -147,21 +157,21 @@ export const KathaCard = ({
       </div>
 
       <div className="absolute top-4 left-4 z-20 flex flex-col gap-2">
-         {item.isPinned && (
-           <div className="w-8 h-8 md:w-10 md:h-10 bg-maroon text-white rounded-xl flex items-center justify-center shadow-lg shadow-maroon/20 animate-in zoom-in-50 duration-300">
-             <Pin className="w-4 h-4 md:w-5 md:h-5 fill-white" />
-           </div>
-         )}
+        {item.isPinned && (
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-maroon text-white rounded-xl flex items-center justify-center shadow-lg shadow-maroon/20 animate-in zoom-in-50 duration-300">
+            <Pin className="w-4 h-4 md:w-5 md:h-5 fill-white" />
+          </div>
+        )}
       </div>
 
       <div className="px-0.5 mt-auto">
         <h3 className="font-outfit font-black text-slate-900 dark:text-white text-lg md:text-xl tracking-tighter leading-tight group-hover:text-[#8b1D1D] transition-colors truncate">{title}</h3>
-        
+
         {item.tags && item.tags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1">
             {item.tags.map((tag: any) => (
-              <span 
-                key={tag.id} 
+              <span
+                key={tag.id}
                 className="text-[8px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider"
                 style={{ backgroundColor: `${tag.color}20`, color: tag.color, border: `1px solid ${tag.color}40` }}
               >

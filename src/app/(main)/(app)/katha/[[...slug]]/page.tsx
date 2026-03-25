@@ -160,6 +160,7 @@ export default function KathaCollectionPage() {
   const [modalPlaceholder, setModalPlaceholder] = useState("");
   const [modalInputValue, setModalInputValue] = useState("");
   const [modalType, setModalType] = useState<'create_folder' | 'create_file' | 'edit' | 'create_collection' | null>(null);
+  const [modalFile, setModalFile] = useState<File | null>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
@@ -313,6 +314,7 @@ export default function KathaCollectionPage() {
   const openInputModal = (type: 'create_folder' | 'create_file' | 'edit' | 'create_collection', item?: any) => {
     setModalType(type);
     setActiveItem(item || null);
+    setModalFile(null);
     if (type === 'create_folder') {
       setModalTitle("New Folder");
       setModalPlaceholder("Enter folder name...");
@@ -354,7 +356,14 @@ export default function KathaCollectionPage() {
         setIsInputModalOpen(false);
 
         try {
-          res = await api.post('/folders', { name: modalInputValue, parentFolderId: currentFolderId });
+          const isFormData = !!modalFile;
+          const body: any = isFormData ? new FormData() : { name: modalInputValue, parentFolderId: currentFolderId };
+          if (isFormData) {
+              body.append('name', modalInputValue);
+              if (currentFolderId) body.append('parentFolderId', currentFolderId);
+              body.append('coverImage', modalFile);
+          }
+          res = await api.post('/folders', body);
           const newFolder = res.data?.data || res.data;
           processedItem = { ...newFolder, type: 'folder', info: getItemInfoMemo({ ...newFolder, type: 'folder' }) };
 
@@ -380,7 +389,14 @@ export default function KathaCollectionPage() {
         setIsInputModalOpen(false);
 
         try {
-          res = await api.post('/folders', { name: modalInputValue, section: 'KATHA' });
+          const isFormData = !!modalFile;
+          const body: any = isFormData ? new FormData() : { name: modalInputValue, section: 'KATHA' };
+          if (isFormData) {
+              body.append('name', modalInputValue);
+              body.append('section', 'KATHA');
+              body.append('coverImage', modalFile);
+          }
+          res = await api.post('/folders', body);
           const newCol = res.data?.data || res.data;
           processedItem = { ...newCol, type: 'folder', info: getItemInfoMemo({ ...newCol, type: 'folder' }) };
 
@@ -435,7 +451,14 @@ export default function KathaCollectionPage() {
         setIsInputModalOpen(false);
 
         try {
-          await api.put(endpoint, { name: modalInputValue });
+          if (activeItem.type === 'folder' && modalFile) {
+             const formData = new FormData();
+             formData.append('name', modalInputValue);
+             formData.append('coverImage', modalFile);
+             await api.put(endpoint, formData);
+          } else {
+             await api.put(endpoint, { name: modalInputValue });
+          }
           contentCache.delete(slug.join('/') || 'root');
           if (slug.length === 0) contentCache.delete('root');
           showToast("Renamed successfully", "success");
@@ -1385,6 +1408,20 @@ export default function KathaCollectionPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleInputSubmit()}
             />
           </div>
+          
+          {(modalType === 'create_collection' || modalType === 'create_folder' || (modalType === 'edit' && activeItem?.type === 'folder')) && (
+            <div className="space-y-2 mt-4">
+              <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
+                Cover Image (Optional)
+              </p>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={(e) => setModalFile(e.target.files?.[0] || null)}
+                className="w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-[#8b1D1D]/10 file:text-[#8b1D1D] hover:file:bg-[#8b1D1D]/20 transition-all cursor-pointer bg-slate-50 dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-800 p-2"
+              />
+            </div>
+          )}
         </div>
       </Modal>
 
