@@ -57,7 +57,10 @@ export const KathaCard = ({
     { Icon: Tag, label: "Tag", onClick: onTag, bg: "bg-indigo-100 dark:bg-indigo-900/40", text: "text-indigo-700 dark:text-indigo-300" },
     {
       Icon: Copy, label: "Copy link", onClick: () => {
-        navigator.clipboard.writeText(window.location.origin + `/katha/${item.name}`);
+        const shareLink = item.type === 'file' 
+          ? window.location.origin + `/granth/editor/${item.id}` 
+          : window.location.origin + `/granth/${item.name}`;
+        navigator.clipboard.writeText(shareLink);
       }, bg: "bg-blue-100 dark:bg-blue-900/40", text: "text-blue-700 dark:text-blue-300"
     },
     { Icon: Pin, label: isPinned ? "Unpin" : "Pin", onClick: onPin, bg: isPinned ? "bg-maroon text-white" : "bg-slate-100 dark:bg-slate-800", text: isPinned ? "text-white" : "text-slate-700 dark:text-slate-200" },
@@ -65,7 +68,10 @@ export const KathaCard = ({
     { Icon: Download, label: "Download", onClick: () => { }, bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-700 dark:text-emerald-300" },
     {
       Icon: Share2, label: "Share", onClick: () => {
-        navigator.clipboard.writeText(window.location.origin + `/katha/${item.name}`);
+        const shareLink = item.type === 'file' 
+          ? window.location.origin + `/granth/editor/${item.id}` 
+          : window.location.origin + `/granth/${item.name}`;
+        navigator.clipboard.writeText(shareLink);
       }, bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-700 dark:text-purple-300"
     },
     { Icon: Move, label: "Move", onClick: onMove, bg: "bg-orange-50 dark:bg-orange-950/30", text: "text-orange-600 dark:text-orange-400" },

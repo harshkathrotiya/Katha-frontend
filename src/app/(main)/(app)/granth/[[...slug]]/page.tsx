@@ -252,59 +252,47 @@ export default function GranthCollectionPage() {
         if (slug.length === 0) setKathaList(cached.contents);
         setCurrentFolderId(cached.folderId);
         setLoading(false);
-        // Build trie in background
-        const trie = new Trie();
-        cached.contents.forEach((it: any) => trie.insert(it.name || it.title || '', it));
-        trieRef.current = trie;
-        // Proceed to fetch fresh data in background (Stale-While-Revalidate)
-      } else {
-        setLoading(true);
       }
 
+      setLoading(true);
       try {
-        if (slug.length === 0) {
-          const res = await api.get('/folders?section=GRANTH');
-          const data = (res.data || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfo({ ...f, type: 'folder' }) }));
-          setKathaList(data);
-          setMixedContents(data);
-          setFilteredContents(data);
-          setCurrentFolderId(null);
-          contentCache.set('root', { contents: data, folderId: null });
+        const resolveRes = await api.post('/folders/resolve-path', {
+          path: slug,
+          section: 'GRANTH',
+          includeContents: true
+        });
 
-          // DSA: Initialize Trie for root search
-          const trie = new Trie();
-          data.forEach((it: any) => trie.insert(it.name || it.title || '', it));
-          trieRef.current = trie;
-        } else {
-          // Optimized: Resolve path and get contents in ONE call
-          const resolveRes = await api.post('/folders/resolve-path', {
-            path: slug,
-            section: 'GRANTH',
-            includeContents: true
-          });
+        const data = resolveRes.data?.data || resolveRes.data;
 
-          const folderData = resolveRes.data;
-          const folderId = folderData.id;
-          setCurrentFolderId(folderId);
+        if (data.type === 'file' && data.item) {
+          // 🔹 DEEP LINKED FILE (EDITOR)
+          handleOpenEditor(data.item);
+          setLoading(false);
+          return;
+        }
 
-          const { folders, files } = folderData.contents;
-
+        // 🔹 FOLDER OR ROOT
+        const contents = data.contents;
+        if (contents) {
           const combined = [
-            ...(folders || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfoMemo({ ...f, type: 'folder' }) })),
-            ...(files || []).map((f: any) => ({ ...f, type: 'file', info: getItemInfoMemo({ ...f, type: 'file' }) }))
+            ...(contents.folders || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfoMemo({ ...f, type: 'folder' }) })),
+            ...(contents.files || []).map((f: any) => ({ ...f, type: 'file', info: getItemInfoMemo({ ...f, type: 'file' }) }))
           ].sort((a, b) => (a.order || 0) - (b.order || 0));
 
           setMixedContents(combined);
           setFilteredContents(combined);
-          contentCache.set(cacheKey, { contents: combined, folderId });
-
-          // DSA: Initialize Trie for search
+          if (slug.length === 0) setKathaList(combined);
+          contentCache.set(cacheKey, { contents: combined, folderId: data.id });
+          
           const trie = new Trie();
-          combined.forEach(it => trie.insert(it.name || it.title || '', it));
+          combined.forEach((it: any) => trie.insert(it.name || it.title || '', it));
           trieRef.current = trie;
         }
+        setCurrentFolderId(data.id);
+        setIsEditorOpen(false); // UI Clean: close editor if we moved to a folder path
       } catch (err) {
-        console.error('Failed to fetch:', err);
+        showToast("Path not found", "error");
+        if (slug.length > 0) router.push('/granth');
       } finally {
         setLoading(false);
       }
@@ -985,10 +973,8 @@ export default function GranthCollectionPage() {
     return results;
   };
 
-  const handleFileClick = async (item: any) => {
-    if (item.type !== 'file') return;
+  const handleOpenEditor = async (item: any) => {
     setEditingFile(item);
-    // Load content BEFORE opening editor so it mounts with the right content
     let content = "";
     let format: "html" | "json" = "html";
     try {
@@ -1011,6 +997,18 @@ export default function GranthCollectionPage() {
     setEditorFormat(format);
     historyRef.current = new EditorHistory(content);
     setIsEditorOpen(true);
+  };
+
+  const handleOpenItem = (item: any) => {
+    // 🔹 Build semantic path: current path + new item name
+    const currentPath = slug.join('/');
+    const newPath = currentPath ? `${currentPath}/${item.name}` : item.name;
+    router.push(`/granth/${newPath}`);
+  };
+
+  const handleFileClick = async (item: any) => {
+    if (item.type !== 'file') return;
+    handleOpenItem(item);
   };
 
   if (loading) {
@@ -1150,9 +1148,10 @@ export default function GranthCollectionPage() {
                       } else showToast('Download coming soon for folders', 'info');
                     }}
                     onShare={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      showToast('Link copied to clipboard', 'success');
-                    }}
+                        // 🔹 Copy current URL
+                        navigator.clipboard.writeText(window.location.href);
+                        showToast('Link copied to clipboard', 'success');
+                      }}
                     onUser={() => handleShareClick(item)}
                     onMove={() => handleOpenMoveModal(item)}
                     onEdit={() => openInputModal('edit', item)}
@@ -1161,13 +1160,7 @@ export default function GranthCollectionPage() {
                       setIsConfirmModalOpen(true);
                     }}
                     onHide={() => handleToggleHide(item)}
-                    onClick={() => {
-                      if (item.type === 'folder') {
-                        router.push(`/granth/${slug.join('/')}/${item.name}`);
-                      } else {
-                        handleFileClick(item);
-                      }
-                    }}
+                    onClick={() => handleOpenItem(item)}
                   />
                 ))
               )}
@@ -1231,7 +1224,7 @@ export default function GranthCollectionPage() {
                 <KathaCard
                   key={item.id}
                   item={item}
-                  onOpen={() => router.push(`/granth/${item.name}`)}
+                  onOpen={() => handleOpenItem(item)}
                   onEdit={() => openInputModal('edit', { ...item, type: 'folder' })}
                   onDelete={() => {
                     setItemToDelete({ ...item, type: 'folder' });
@@ -1441,6 +1434,9 @@ export default function GranthCollectionPage() {
             setIsEditorOpen(false);
             setEditingFile(null);
             setEditorContent("");
+            // 🔹 URL Cleanup: Go back to the containing folder
+            const parentPath = slug.slice(0, -1).join('/');
+            router.push(`/granth/${parentPath}`);
           }}
         />
       )}
