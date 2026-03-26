@@ -123,21 +123,29 @@ export const KathaCard = ({
           </div>
 
           <div className="grid grid-cols-4 gap-1.5 md:gap-2">
-            {actions.map((action, idx) => (
-              <div
-                key={idx}
-                className="flex flex-col items-center gap-1 group/item transition-all duration-700"
-                style={{ transitionDelay: `${idx * 40}ms` }}
-              >
-                <button
-                  onClick={(e) => { e.stopPropagation(); action.onClick(); }}
-                  className={`aspect-square w-full ${action.bg} ${action.text} rounded-xl flex flex-col items-center justify-center transition-all duration-500 hover:scale-125 hover:z-30 hover:shadow-2xl active:scale-90 group/btn border border-white/10 dark:border-slate-800/50 hover:border-maroon/20 shadow-sm shadow-black/5`}
-                  title={action.label}
+            {actions.map((action, idx) => {
+              const isActionFav = action.label === "Bookmark" && isFav;
+              const isActionPin = (action.label === "Pin" || action.label === "Unpin") && isPinned;
+              const isActionHide = (action.label === "Hide" || action.label === "Unhide") && item.isHidden;
+
+              return (
+                <div
+                  key={idx}
+                  className="flex flex-col items-center gap-1 group/item transition-all duration-700"
+                  style={{ transitionDelay: `${idx * 40}ms` }}
                 >
-                  <action.Icon className="h-3.5 w-3.5 md:h-4 md:w-4 stroke-[2.5px] transition-transform duration-500 group-hover/btn:rotate-12 group-hover/btn:scale-110" />
-                </button>
-              </div>
-            ))}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); action.onClick(); }}
+                    className={`aspect-square w-full ${action.bg} ${action.text} rounded-xl flex flex-col items-center justify-center transition-all duration-500 hover:scale-125 hover:z-30 hover:shadow-2xl active:scale-90 group/btn border border-white/10 dark:border-slate-800/50 hover:border-maroon/20 shadow-sm shadow-black/5`}
+                    title={action.label}
+                  >
+                    <action.Icon 
+                      className={`h-3.5 w-3.5 md:h-4 md:w-4 stroke-[2.5px] transition-transform duration-500 group-hover/btn:rotate-12 group-hover/btn:scale-110 ${(isActionFav || isActionPin || isActionHide) ? 'fill-current' : ''}`} 
+                    />
+                  </button>
+                </div>
+              );
+            })}
           </div>
 
           <div className="space-y-1.5 mt-1">

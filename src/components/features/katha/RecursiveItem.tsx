@@ -107,14 +107,34 @@ export const RecursiveItem = ({
         <div className="flex flex-wrap items-center justify-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative w-full sm:w-auto">
           <div className="flex items-center gap-1 px-0.5 md:px-1">
             {/* User Requested Sequence: Bookmark, Hide, Tag, Copy, Pin, Download, Share, User Share */}
-            <MiniAction Icon={Heart} label="Bookmark" onClick={onFav} color={isFav ? "text-amber-500" : "text-slate-400 hover:text-amber-500"} />
-            <MiniAction Icon={item.isHidden ? Eye : EyeOff} label={item.isHidden ? "Unhide" : "Hide"} onClick={onHide} color={item.isHidden ? "text-maroon" : "text-slate-400 hover:text-slate-600"} />
+            <MiniAction 
+                Icon={Heart} 
+                label="Bookmark" 
+                onClick={onFav} 
+                color={isFav ? "text-maroon" : "text-slate-400 hover:text-maroon"} 
+                fill={isFav} 
+                bg={isFav ? "bg-maroon/[0.05]" : "bg-white dark:bg-slate-900"} 
+            />
+            <MiniAction 
+                Icon={item.isHidden ? Eye : EyeOff} 
+                label={item.isHidden ? "Unhide" : "Hide"} 
+                onClick={onHide} 
+                color={item.isHidden ? "text-slate-900 dark:text-white" : "text-slate-400 hover:text-slate-600"} 
+                bg={item.isHidden ? "bg-slate-100 dark:bg-slate-800" : "bg-white dark:bg-slate-900"} 
+            />
             <MiniAction Icon={Tag} label="Tag" onClick={onTag} color="text-indigo-500 hover:text-indigo-600" />
             <MiniAction Icon={Copy} label="Copy Name" onClick={() => navigator.clipboard.writeText(title)} color="text-blue-500 hover:text-blue-600" />
           </div>
           <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-700 opacity-50" />
           <div className="flex items-center gap-1 px-0.5 md:px-1">
-            <MiniAction Icon={Pin} label={isPinned ? "Unpin" : "Pin"} onClick={onPin} color={isPinned ? "text-[#8b1D1D] fill-[#8b1D1D]/10" : "text-slate-400 hover:text-[#8b1D1D]"} />
+            <MiniAction 
+                Icon={Pin} 
+                label={isPinned ? "Unpin" : "Pin"} 
+                onClick={onPin} 
+                color={isPinned ? "text-[#8b1D1D]" : "text-slate-400 hover:text-[#8b1D1D]"} 
+                fill={isPinned} 
+                bg={isPinned ? "bg-[#8b1D1D]/[0.05]" : "bg-white dark:bg-slate-900"} 
+            />
             <MiniAction Icon={Download} label="Download" onClick={onDownload} color="text-blue-500 hover:text-blue-600" />
             <MiniAction Icon={Share2} label="Share" onClick={onShare} color="text-emerald-500 hover:text-emerald-600" />
             <MiniAction Icon={User} label="User Share" onClick={onUser} color="text-purple-500 hover:text-purple-600" />
