@@ -36,6 +36,7 @@ import {
   MoreHorizontal,
   LayoutDashboard,
   Heart,
+  Star,
   Pin,
   ArrowUpAZ,
   ArrowDownZA,
@@ -1479,6 +1480,27 @@ export default function GranthCollectionPage() {
               [1, 2, 3].map(i => <div key={i} className="h-14 rounded-2xl bg-slate-50 dark:bg-slate-900 animate-pulse" />)
             ) : (
               <>
+                <button
+                  onClick={() => handleCompleteFav()}
+                  className="w-full text-left p-4 rounded-2xl border-2 border-dashed border-maroon/20 hover:border-maroon/50 hover:bg-maroon/[0.04] transition-all flex items-center justify-between group bg-maroon/[0.01]"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-maroon/10 flex items-center justify-center text-maroon group-hover:bg-maroon/20 transition-colors">
+                      <Star size={18} className="fill-maroon" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="font-black text-maroon uppercase tracking-tight text-[10px]">Quick Add</span>
+                      <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight text-xs">General Favourites</span>
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="text-maroon/40 group-hover:translate-x-1 transition-all" />
+                </button>
+
+                <div className="my-3 flex items-center gap-3">
+                  <div className="flex-1 h-[1px] bg-slate-100 dark:bg-slate-800" />
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Or Choose Collection</span>
+                  <div className="flex-1 h-[1px] bg-slate-100 dark:bg-slate-800" />
+                </div>
                 {favCollections.map(col => (
                   <button
                     key={col.id}
