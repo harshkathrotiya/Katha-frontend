@@ -283,7 +283,7 @@ export default function GranthCollectionPage() {
           setFilteredContents(combined);
           if (slug.length === 0) setKathaList(combined);
           contentCache.set(cacheKey, { contents: combined, folderId: data.id });
-          
+
           const trie = new Trie();
           combined.forEach((it: any) => trie.insert(it.name || it.title || '', it));
           trieRef.current = trie;
@@ -527,11 +527,11 @@ export default function GranthCollectionPage() {
 
       const { favorited } = res.data;
       showToast(favorited ? 'Added to Favourites ♥' : 'Removed from Favourites', favorited ? 'success' : 'info');
-      
+
       // Update with exact status from server (in case of race conditions)
       if (favorited !== newFavStatus) {
-         setList(targetList.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
-         if (!isGallery) setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
+        setList(targetList.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
+        if (!isGallery) setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
       }
 
     } catch (err: any) {
@@ -561,7 +561,7 @@ export default function GranthCollectionPage() {
       });
 
       const { favorited } = res.data;
-      
+
       const mapper = (it: any) => it.id === activeFavItem.id ? { ...it, isFav: favorited } : it;
       setList(targetList.map(mapper));
       if (!isGallery) setFilteredContents(prev => prev.map(mapper));
@@ -915,14 +915,14 @@ export default function GranthCollectionPage() {
       };
 
       const mapper = (it: any) => it.id === activeItem.id ? { ...it, tags: updateTags(it.tags) } : it;
-      
+
       const isGallery = slug.length === 0;
       if (isGallery) setKathaList(prev => prev.map(mapper));
       else {
         setMixedContents(prev => prev.map(mapper));
         setFilteredContents(prev => prev.map(mapper));
       }
-      
+
       setActiveItem((prev: any) => ({ ...prev, tags: updateTags(prev.tags) }));
       showToast(hasTag ? "Tag removed" : "Tag added", "success");
     } catch (err) {
@@ -1148,10 +1148,10 @@ export default function GranthCollectionPage() {
                       } else showToast('Download coming soon for folders', 'info');
                     }}
                     onShare={() => {
-                        // 🔹 Copy current URL
-                        navigator.clipboard.writeText(window.location.href);
-                        showToast('Link copied to clipboard', 'success');
-                      }}
+                      // 🔹 Copy current URL
+                      navigator.clipboard.writeText(window.location.href);
+                      showToast('Link copied to clipboard', 'success');
+                    }}
                     onUser={() => handleShareClick(item)}
                     onMove={() => handleOpenMoveModal(item)}
                     onEdit={() => openInputModal('edit', item)}
@@ -1459,9 +1459,9 @@ export default function GranthCollectionPage() {
       </Modal>
 
       {/* Favorite Selection Modal */}
-      <Modal 
-        isOpen={isFavModalOpen} 
-        onClose={() => { setIsFavModalOpen(false); setActiveFavItem(null); }} 
+      <Modal
+        isOpen={isFavModalOpen}
+        onClose={() => { setIsFavModalOpen(false); setActiveFavItem(null); }}
         title="Add to Favourites"
         maxWidth="max-w-md"
       >
@@ -1512,7 +1512,7 @@ export default function GranthCollectionPage() {
                     <ChevronRight size={16} className="text-slate-300 group-hover:text-maroon group-hover:translate-x-1 transition-all" />
                   </button>
                 ))}
-                
+
                 {!isCreatingInFav ? (
                   <button
                     onClick={() => setIsCreatingInFav(true)}
@@ -1524,12 +1524,12 @@ export default function GranthCollectionPage() {
                 ) : (
                   <div className="p-4 bg-maroon/[0.03] rounded-2xl border-2 border-maroon/20 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black uppercase text-maroon">New Collection Name</span>
-                       <button onClick={() => setIsCreatingInFav(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14}/></button>
+                      <span className="text-[10px] font-black uppercase text-maroon">New Collection Name</span>
+                      <button onClick={() => setIsCreatingInFav(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14} /></button>
                     </div>
-                    <Input 
-                      placeholder="Enter name..." 
-                      value={newFavCollectionName} 
+                    <Input
+                      placeholder="Enter name..."
+                      value={newFavCollectionName}
                       onChange={(e) => setNewFavCollectionName(e.target.value)}
                       className="rounded-xl border-maroon/20 focus:border-maroon text-slate-800 dark:text-white"
                       autoFocus
@@ -1563,9 +1563,9 @@ export default function GranthCollectionPage() {
       >
         <div className="space-y-4">
           <div className="flex gap-2">
-            <Input 
-              placeholder="Search or create tag" 
-              value={tagSearch} 
+            <Input
+              placeholder="Search or create tag"
+              value={tagSearch}
               onChange={(e) => setTagSearch(e.target.value)}
               className="flex-1 rounded-xl border-slate-200 dark:border-slate-800"
             />
@@ -1577,19 +1577,19 @@ export default function GranthCollectionPage() {
           </div>
 
           {isCreatingTag && (
-             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="flex items-center justify-between">
-                   <span className="text-[10px] font-black uppercase text-slate-400">Tag Preview</span>
-                   <button onClick={() => setIsCreatingTag(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14}/></button>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-slate-400">Tag Preview</span>
+                <button onClick={() => setIsCreatingTag(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14} /></button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm" style={{ backgroundColor: `${newTagColor}20`, color: newTagColor, border: `1px solid ${newTagColor}40` }}>
+                  {newTagName || 'New Tag'}
                 </div>
-                <div className="flex items-center gap-3">
-                   <div className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm" style={{ backgroundColor: `${newTagColor}20`, color: newTagColor, border: `1px solid ${newTagColor}40` }}>
-                      {newTagName || 'New Tag'}
-                   </div>
-                   <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent" />
-                </div>
-                <Button onClick={handleCreateTag} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest">Create & Apply</Button>
-             </div>
+                <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent" />
+              </div>
+              <Button onClick={handleCreateTag} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest">Create & Apply</Button>
+            </div>
           )}
 
           <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
