@@ -264,16 +264,22 @@ export default function KathaCollectionPage() {
       try {
         if (slug.length === 0) {
           const res = await api.get('/folders?section=KATHA');
-          const data = (res.data || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfo({ ...f, type: 'folder' }) }));
-          setKathaList(data);
-          setMixedContents(data);
-          setFilteredContents(data);
+          const rootData = res.data || { folders: [], files: [] };
+          
+          const combined = [
+            ...(rootData.folders || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfo({ ...f, type: 'folder' }) })),
+            ...(rootData.files || []).map((f: any) => ({ ...f, type: 'file', info: getItemInfo({ ...f, type: 'file' }) }))
+          ].sort((a, b) => (a.order || 0) - (b.order || 0));
+
+          setKathaList(combined);
+          setMixedContents(combined);
+          setFilteredContents(combined);
           setCurrentFolderId(null);
-          contentCache.set('root', { contents: data, folderId: null });
+          contentCache.set('root', { contents: combined, folderId: null });
 
           // DSA: Initialize Trie for root search
           const trie = new Trie();
-          data.forEach((it: any) => trie.insert(it.name || it.title || '', it));
+          combined.forEach((it: any) => trie.insert(it.name || it.title || '', it));
           trieRef.current = trie;
         } else {
           // Optimized: Resolve path and get contents in ONE call
