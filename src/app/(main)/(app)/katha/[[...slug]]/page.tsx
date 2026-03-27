@@ -894,6 +894,24 @@ export default function KathaCollectionPage() {
     }
   };
 
+  const handleDeleteTag = async (id: string) => {
+    try {
+      if (!confirm("Are you sure you want to delete this tag globally? It will be removed from ALL files and folders.")) return;
+      await api.delete(`/tags/${id}`);
+      setAllTags(prev => prev.filter(t => t.id !== id));
+      showToast("Tag deleted from global list", "info");
+      // Refresh active item tags
+      if (activeItem) {
+        setActiveItem({
+          ...activeItem,
+          tags: activeItem.tags?.filter((t: any) => t.id !== id) || []
+        });
+      }
+    } catch (err: any) {
+      showToast(err.message || "Failed to delete tag", "error");
+    }
+  };
+
   const handleToggleHide = async (item: any) => {
     const isVisible = !item.isHidden;
     const mapper = (it: any) => it.id === item.id ? { ...it, isHidden: isVisible } : it;
@@ -1627,10 +1645,15 @@ export default function KathaCollectionPage() {
                   className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${isActive ? 'border-maroon bg-maroon/5 ring-1 ring-maroon/20' : 'border-slate-50 hover:border-slate-100 dark:hover:border-slate-800'}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: tag.color }} />
-                    <span className="font-bold text-slate-700 dark:text-slate-200 uppercase tracking-tight text-xs">{tag.name}</span>
+                    {isActive && <CheckCircle size={16} className="text-maroon shrink-0" />}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDeleteTag(tag.id); }}
+                      className="p-1 px-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-600 rounded-lg transition-all"
+                      title="Delete Tag"
+                    >
+                      <Trash2 size={13} />
+                    </button>
                   </div>
-                  {isActive && <CheckCircle size={16} className="text-maroon" />}
                 </div>
               );
             })}
