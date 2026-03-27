@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   Home,
@@ -141,11 +141,27 @@ const contentCache = {
 export default function KathaCollectionPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const slug = params?.slug as string[] || [];
 
   const [loading, setLoading] = useState(true);
   const [kathaList, setKathaList] = useState<any[]>([]);
   const [mixedContents, setMixedContents] = useState<any[]>([]);
+
+  // 🔹 Deep Link: Auto-open file if 'open' param is in URL
+  useEffect(() => {
+    const fileIdToOpen = searchParams.get('open');
+    if (fileIdToOpen && mixedContents.length > 0) {
+      // Find the item in the currently loaded contents
+      const item = mixedContents.find(it => it.id === fileIdToOpen && it.type === 'file');
+      if (item) {
+        handleFileClick(item);
+        // Clean up URL to prevent repeat opening on refresh
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [searchParams, mixedContents]);
   const [filteredContents, setFilteredContents] = useState<any[]>([]);
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const trieRef = useRef<Trie>(new Trie());
@@ -543,23 +559,7 @@ export default function KathaCollectionPage() {
 
       const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
 
-      if (!item.isFav) {
-        // Favoriting: Show selection modal
-        setIsFavModalOpen(true);
-        setActiveFavItem(item);
-        setIsLoadingCollections(true);
-        try {
-          const res = await api.get('/favorites');
-          setFavCollections(res.data || []);
-        } catch (err) {
-          showToast('Failed to load collections', 'error');
-        } finally {
-          setIsLoadingCollections(false);
-        }
-        return;
-      }
-
-      // Unfavoriting: Toggle immediately
+      // Toggle Favorite immediately via API
       const res = await api.post('/favorites/toggle', {
         itemId: item.id,
         itemType
@@ -568,14 +568,14 @@ export default function KathaCollectionPage() {
       const { favorited } = res.data;
       showToast(favorited ? 'Added to Favourites ♥' : 'Removed from Favourites', favorited ? 'success' : 'info');
       
-      // Update with exact status from server (in case of race conditions)
+      // Update with exact status from server (in case of race conditions or validation)
       if (favorited !== newFavStatus) {
          setList(targetList.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
          if (!isGallery) setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
       }
 
     } catch (err: any) {
-      // Rollback optimistic update on real error
+      // Rollback optimistic update on error
       const isGallery = slug.length === 0;
       const setList = isGallery ? setKathaList : setMixedContents;
       const targetList = isGallery ? kathaList : mixedContents;
@@ -1650,11 +1650,20 @@ export default function KathaCollectionPage() {
                   onClick={() => handleToggleTag(tag)}
                   className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${isActive ? 'border-maroon bg-maroon/5 ring-1 ring-maroon/20' : 'border-slate-50 hover:border-slate-100 dark:hover:border-slate-800'}`}
                 >
-                  <div className="flex items-center gap-3">
-                    {isActive && <CheckCircle size={16} className="text-maroon shrink-0" />}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div 
+                      className="w-2.5 h-2.5 rounded-full shrink-0" 
+                      style={{ backgroundColor: tag.color }}
+                    />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                      {tag.name}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isActive && <CheckCircle size={14} className="text-maroon shrink-0" />}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleDeleteTag(tag.id); }}
-                      className="p-1 px-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-600 rounded-lg transition-all"
+                      className="p-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-300 hover:text-red-500 rounded-lg transition-all"
                       title="Delete Tag"
                     >
                       <Trash2 size={13} />

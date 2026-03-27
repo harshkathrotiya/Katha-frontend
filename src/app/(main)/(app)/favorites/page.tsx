@@ -434,9 +434,9 @@ export default function FavouritesPage() {
       // Navigate to the parent folder's section and path
       const section = (item.file.parent?.section || "KATHA").toLowerCase();
       if (item.file.parent?.name) {
-        router.push(`/${section}/${item.file.parent.name}`);
+        router.push(`/${section}/${item.file.parent.name}?open=${item.file.id}`);
       } else {
-        router.push(`/${section}`);
+        router.push(`/${section}?open=${item.file.id}`);
       }
     } else if (item.itemType === "FOLDER" && item.folder) {
       const section = (item.folder.section || "KATHA").toLowerCase();
