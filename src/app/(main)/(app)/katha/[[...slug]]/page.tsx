@@ -263,7 +263,7 @@ export default function KathaCollectionPage() {
 
       try {
         if (slug.length === 0) {
-          const res = await api.get('/folders?section=KATHA');
+          const res = await api.get('/folders/contents?section=KATHA');
           const rootData = res.data || { folders: [], files: [] };
           
           const combined = [
