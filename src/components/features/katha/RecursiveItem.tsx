@@ -61,9 +61,12 @@ export const RecursiveItem = ({
     <div
       onClick={onClick}
       style={{ animationDelay: `${index * 50}ms` }}
-      className={`w-full bg-white dark:bg-slate-900 border ${isPinned ? 'border-[#8b1D1D]/50 bg-[#8b1D1D]/[0.02]' : 'border-slate-100 dark:border-slate-800'} rounded-2xl p-3 md:p-4 flex flex-col lg:flex-row items-start lg:items-center gap-3 md:gap-5 shadow-sm hover:border-[#8b1D1D]/30 transition-all group cursor-pointer relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both`}
+      className={`w-full bg-white dark:bg-slate-900 border ${isPinned ? 'border-[#8b1D1D]/50 bg-[#8b1D1D]/[0.02]' : 'border-slate-100 dark:border-slate-800'} rounded-2xl p-3 md:p-4 flex flex-col lg:flex-row items-start lg:items-center gap-3 md:gap-5 shadow-sm hover:border-[#8b1D1D]/30 transition-all group cursor-pointer relative hover:z-50 animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both`}
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b1D1D]/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Decorative Background - Clipped */}
+      <div className="absolute inset-0 overflow-hidden rounded-2xl pointer-events-none">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-[#8b1D1D]/5 rounded-full blur-3xl -mr-16 -mt-16 opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
 
       <div className="flex items-center gap-3 md:gap-5 w-full lg:w-auto">
         <div className="w-10 h-10 md:w-12 md:h-12 bg-slate-50 dark:bg-slate-800 rounded-xl flex items-center justify-center shrink-0 group-hover:bg-[#8b1D1D]/5 transition-colors">
@@ -104,7 +107,7 @@ export const RecursiveItem = ({
       </div>
 
       <div className="flex flex-col sm:flex-row items-center justify-between lg:justify-end gap-2 w-full lg:flex-1">
-        <div className="flex flex-wrap items-center justify-center gap-1 p-1 bg-slate-50 dark:bg-slate-800/80 backdrop-blur-sm rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative w-full sm:w-auto">
+        <div className="flex flex-wrap items-center justify-center gap-1 p-1 bg-white/90 dark:bg-slate-800/90 rounded-2xl border border-slate-100 dark:border-slate-700/50 shadow-sm relative overflow-visible z-50 w-full sm:w-auto">
           <div className="flex items-center gap-1 px-0.5 md:px-1">
             {/* User Requested Sequence: Bookmark, Hide, Tag, Copy, Pin, Download, Share, User Share */}
             <MiniAction 

@@ -1,37 +1,46 @@
 import React from "react";
+import { LucideIcon } from "lucide-react";
 
 /**
- * MiniAction Component - Small icon button with tooltip
+ * MiniAction Component - A small action button with a tooltip used in item action bars.
  */
-export const MiniAction = ({
-  Icon,
-  label,
-  onClick,
-  color = "text-[#8b1D1D]",
-  bg = "bg-white dark:bg-slate-900",
-  fill = false
-}: {
-  Icon: any;
+interface MiniActionProps {
+  Icon: LucideIcon;
   label: string;
-  onClick: (e: any) => void;
+  onClick: () => void;
   color?: string;
-  bg?: string;
   fill?: boolean;
-}) => (
-  <button
-    onClick={(e) => { e.stopPropagation(); onClick(e); }}
-    className={`group/btn relative p-2 md:p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 hover:border-[#8b1D1D]/30 transition-all ${bg} ${color} hover:shadow-lg active:scale-95 flex items-center justify-center`}
-  >
-    <Icon 
-      size={18} 
-      strokeWidth={2.5} 
-      className={`md:w-[18px] md:h-[18px] w-[16px] h-[16px] ${fill ? 'fill-current' : ''}`} 
-    />
+  bg?: string;
+}
 
-    {/* Tooltip */}
-    <div className="hidden md:block absolute -top-10 left-1/2 -translate-x-1/2 px-3 py-1.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-lg opacity-0 group-hover/btn:opacity-100 transition-all duration-300 pointer-events-none shadow-xl transform translate-y-2 group-hover/btn:translate-y-0 z-[100] whitespace-nowrap">
-      {label}
-      <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 dark:bg-white rotate-45" />
-    </div>
-  </button>
-);
+export const MiniAction: React.FC<MiniActionProps> = ({ 
+  Icon, 
+  label, 
+  onClick, 
+  color = "text-slate-500", 
+  fill = false, 
+  bg = "bg-white dark:bg-slate-900" 
+}) => {
+  return (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={`group/btn relative p-2 md:p-2.5 rounded-xl border border-slate-100 dark:border-slate-800 transition-all ${bg} ${color} hover:border-[#8B1D1D]/30 hover:shadow-lg active:scale-95 flex items-center justify-center`}
+      aria-label={label}
+    >
+      <Icon 
+        className={`${fill ? 'fill-current' : 'fill-none'} md:w-[18px] md:h-[18px] w-[16px] h-[16px]`} 
+        strokeWidth={2.5} 
+      />
+      
+      {/* Premium Tooltip */}
+      <div className="hidden md:block absolute -top-12 left-1/2 -translate-x-1/2 px-3 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] font-black uppercase tracking-widest rounded-xl opacity-0 group-hover/btn:opacity-100 group-hover/btn:-top-11 transition-all pointer-events-none whitespace-nowrap shadow-2xl z-[100] border border-white/10 dark:border-slate-200">
+        <span className="relative z-10">{label}</span>
+        {/* Tooltip Arrow */}
+        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 dark:bg-white rotate-45" />
+      </div>
+    </button>
+  );
+};

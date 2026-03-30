@@ -168,8 +168,8 @@ export default function KathaCollectionPage() {
   const historyRef = useRef<EditorHistory | null>(null);
 
   // Sorting States
-  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'size'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Modal States
   const [isInputModalOpen, setIsInputModalOpen] = useState(false);
@@ -281,7 +281,7 @@ export default function KathaCollectionPage() {
         if (slug.length === 0) {
           const res = await api.get('/folders/contents?section=KATHA');
           const rootData = res.data || { folders: [], files: [] };
-          
+
           const combined = [
             ...(rootData.folders || []).map((f: any) => ({ ...f, type: 'folder', info: getItemInfo({ ...f, type: 'folder' }) })),
             ...(rootData.files || []).map((f: any) => ({ ...f, type: 'file', info: getItemInfo({ ...f, type: 'file' }) }))
@@ -372,8 +372,10 @@ export default function KathaCollectionPage() {
       if (modalType === 'create_folder') {
         const tempId = `temp-${Date.now()}`;
         const tempItem = { id: tempId, name: modalInputValue, type: 'folder', createdAt: new Date().toISOString(), isPinned: false, info: 'Just now' };
-        if (slug.length === 0) setKathaList(prev => [tempItem, ...prev]);
-        else {
+        if (slug.length === 0) {
+          setKathaList(prev => [tempItem, ...prev]);
+          setFilteredContents(prev => [tempItem, ...prev]);
+        } else {
           setMixedContents(prev => [tempItem, ...prev]);
           setFilteredContents(prev => [tempItem, ...prev]);
         }
@@ -383,9 +385,9 @@ export default function KathaCollectionPage() {
           const isFormData = !!modalFile;
           const body: any = isFormData ? new FormData() : { name: modalInputValue, parentFolderId: currentFolderId };
           if (isFormData) {
-              body.append('name', modalInputValue);
-              if (currentFolderId) body.append('parentFolderId', currentFolderId);
-              body.append('coverImage', modalFile);
+            body.append('name', modalInputValue);
+            if (currentFolderId) body.append('parentFolderId', currentFolderId);
+            body.append('coverImage', modalFile);
           }
           res = await api.post('/folders', body);
           const newFolder = res.data?.data || res.data;
@@ -410,15 +412,16 @@ export default function KathaCollectionPage() {
         const tempId = `temp-${Date.now()}`;
         const tempItem = { id: tempId, name: modalInputValue, type: 'folder', createdAt: new Date().toISOString(), isPinned: false, info: 'Just now' };
         setKathaList(prev => [tempItem, ...prev]);
+        setFilteredContents(prev => [tempItem, ...prev]);
         setIsInputModalOpen(false);
 
         try {
           const isFormData = !!modalFile;
           const body: any = isFormData ? new FormData() : { name: modalInputValue, section: 'KATHA' };
           if (isFormData) {
-              body.append('name', modalInputValue);
-              body.append('section', 'KATHA');
-              body.append('coverImage', modalFile);
+            body.append('name', modalInputValue);
+            body.append('section', 'KATHA');
+            body.append('coverImage', modalFile);
           }
           res = await api.post('/folders', body);
           const newCol = res.data?.data || res.data;
@@ -467,8 +470,10 @@ export default function KathaCollectionPage() {
 
         // Optimistic Rename
         const mapper = (it: any) => it.id === activeItem.id ? { ...it, name: modalInputValue, title: modalInputValue } : it;
-        if (slug.length === 0) setKathaList(prev => prev.map(mapper));
-        else {
+        if (slug.length === 0) {
+          setKathaList(prev => prev.map(mapper));
+          setFilteredContents(prev => prev.map(mapper));
+        } else {
           setMixedContents(prev => prev.map(mapper));
           setFilteredContents(prev => prev.map(mapper));
         }
@@ -476,12 +481,12 @@ export default function KathaCollectionPage() {
 
         try {
           if (activeItem.type === 'folder' && modalFile) {
-             const formData = new FormData();
-             formData.append('name', modalInputValue);
-             formData.append('coverImage', modalFile);
-             await api.put(endpoint, formData);
+            const formData = new FormData();
+            formData.append('name', modalInputValue);
+            formData.append('coverImage', modalFile);
+            await api.put(endpoint, formData);
           } else {
-             await api.put(endpoint, { name: modalInputValue });
+            await api.put(endpoint, { name: modalInputValue });
           }
           contentCache.delete(slug.join('/') || 'root');
           if (slug.length === 0) contentCache.delete('root');
@@ -526,7 +531,7 @@ export default function KathaCollectionPage() {
     });
 
     setList(newItems);
-    if (!isGallery) setFilteredContents(newItems);
+    setFilteredContents(newItems);
     contentCache.delete(slug.join('/') || 'root');
 
     try {
@@ -555,7 +560,7 @@ export default function KathaCollectionPage() {
       // Optimistic UI update
       const mapper = (it: any) => it.id === item.id ? { ...it, isFav: newFavStatus } : it;
       setList(targetList.map(mapper));
-      if (!isGallery) setFilteredContents(prev => prev.map(mapper));
+      setFilteredContents(prev => prev.map(mapper));
 
       const itemType = item.type === 'file' ? 'FILE' : 'FOLDER';
 
@@ -567,11 +572,11 @@ export default function KathaCollectionPage() {
 
       const { favorited } = res.data;
       showToast(favorited ? 'Added to Favourites ♥' : 'Removed from Favourites', favorited ? 'success' : 'info');
-      
+
       // Update with exact status from server (in case of race conditions or validation)
       if (favorited !== newFavStatus) {
-         setList(targetList.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
-         if (!isGallery) setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
+        setList(targetList.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
+        if (!isGallery) setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isFav: favorited } : it));
       }
 
     } catch (err: any) {
@@ -601,10 +606,10 @@ export default function KathaCollectionPage() {
       });
 
       const { favorited } = res.data;
-      
+
       const mapper = (it: any) => it.id === activeFavItem.id ? { ...it, isFav: favorited } : it;
       setList(targetList.map(mapper));
-      if (!isGallery) setFilteredContents(prev => prev.map(mapper));
+      setFilteredContents(prev => prev.map(mapper));
 
       showToast(favorited ? 'Added to Favourites ♥' : 'Removed from Favourites', favorited ? 'success' : 'info');
       setIsFavModalOpen(false);
@@ -805,26 +810,38 @@ export default function KathaCollectionPage() {
     const originalKatha = [...kathaList];
 
     // Optimistic Delete
-    if (slug.length === 0) setKathaList(prev => prev.filter(i => i.id !== deletedId));
-    else {
-      setMixedContents(prev => prev.filter(i => i.id !== deletedId));
-      setFilteredContents(prev => prev.filter(i => i.id !== deletedId));
+    const filterMapper = (prev: any[]) => prev.filter(i => i.id !== deletedId);
+    if (slug.length === 0) {
+      setKathaList(filterMapper);
+      setFilteredContents(filterMapper);
+    } else {
+      setMixedContents(filterMapper);
+      setFilteredContents(filterMapper);
     }
     setIsConfirmModalOpen(false);
 
     try {
-      const endpoint = itemToDelete.type === 'folder' || slug.length === 0 ? `/folders/${deletedId}` : `/files/${deletedId}`;
+      const endpoint = itemToDelete.type === 'folder' ? `/folders/${deletedId}` : `/files/${deletedId}`;
       await api.delete(endpoint);
       contentCache.delete(slug.join('/') || 'root');
       if (slug.length === 0) contentCache.delete('root');
       showToast("Item deleted", "success");
-    } catch (err) {
-      if (slug.length === 0) setKathaList(originalKatha);
-      else {
-        setMixedContents(originalMixed);
-        setFilteredContents(originalMixed);
+    } catch (err: any) {
+      if (err.status === 404) {
+        // Achievement unlocked: It was already deleted elsewhere.
+        // Keep the optimistic delete and just clear the cache.
+        contentCache.delete(slug.join('/') || 'root');
+        if (slug.length === 0) contentCache.delete('root');
+        showToast("Item already removed", "info");
+      } else {
+        // Real error, roll back
+        if (slug.length === 0) setKathaList(originalKatha);
+        else {
+          setMixedContents(originalMixed);
+          setFilteredContents(originalMixed);
+        }
+        showToast(err.message || "Delete failed", "error");
       }
-      showToast("Delete failed", "error");
     }
   };
 
@@ -892,11 +909,21 @@ export default function KathaCollectionPage() {
       await api.put(endpoint, { isPinned: newPinnedStatus });
       contentCache.delete(slug.join('/') || 'root');
       showToast(newPinnedStatus ? "Pinned to top" : "Removed from top", "success");
-    } catch (err) {
-      setKathaList(prev => prev.map(it => it.id === item.id ? { ...it, isPinned: item.isPinned } : it));
-      setMixedContents(prev => prev.map(it => it.id === item.id ? { ...it, isPinned: item.isPinned } : it));
-      setFilteredContents(prev => prev.map(it => it.id === item.id ? { ...it, isPinned: item.isPinned } : it));
-      showToast("Failed to update pin status", "error");
+    } catch (err: any) {
+      if (err.status === 404) {
+        const removeMapper = (prev: any[]) => prev.filter(it => it.id !== item.id);
+        setKathaList(removeMapper);
+        setMixedContents(removeMapper);
+        setFilteredContents(removeMapper);
+        contentCache.delete(slug.join('/') || 'root');
+        showToast("Item no longer exists", "info");
+      } else {
+        const rollbackMapper = (it: any) => it.id === item.id ? { ...it, isPinned: item.isPinned } : it;
+        setKathaList(prev => prev.map(rollbackMapper));
+        setMixedContents(prev => prev.map(rollbackMapper));
+        setFilteredContents(prev => prev.map(rollbackMapper));
+        showToast("Failed to update pin status", "error");
+      }
     }
   };
 
@@ -932,12 +959,21 @@ export default function KathaCollectionPage() {
       await api.post('/hide/toggle', { itemId: item.id, itemType });
       contentCache.delete(slug.join('/') || 'root');
       showToast(isVisible ? "Item Hidden" : "Item Visible", "success");
-    } catch (err) {
-      const rollback = (it: any) => it.id === item.id ? { ...it, isHidden: !isVisible } : it;
-      setKathaList(prev => prev.map(rollback));
-      setMixedContents(prev => prev.map(rollback));
-      setFilteredContents(prev => prev.map(rollback));
-      showToast("Failed to update visibility", "error");
+    } catch (err: any) {
+      if (err.status === 404) {
+        const removeMapper = (prev: any[]) => prev.filter(it => it.id !== item.id);
+        setKathaList(removeMapper);
+        setMixedContents(removeMapper);
+        setFilteredContents(removeMapper);
+        contentCache.delete(slug.join('/') || 'root');
+        showToast("Item no longer exists", "info");
+      } else {
+        const rollback = (it: any) => it.id === item.id ? { ...it, isHidden: !isVisible } : it;
+        setKathaList(prev => prev.map(rollback));
+        setMixedContents(prev => prev.map(rollback));
+        setFilteredContents(prev => prev.map(rollback));
+        showToast("Failed to update visibility", "error");
+      }
     }
   };
 
@@ -973,14 +1009,14 @@ export default function KathaCollectionPage() {
       };
 
       const mapper = (it: any) => it.id === activeItem.id ? { ...it, tags: updateTags(it.tags) } : it;
-      
+
       const isGallery = slug.length === 0;
       if (isGallery) setKathaList(prev => prev.map(mapper));
       else {
         setMixedContents(prev => prev.map(mapper));
         setFilteredContents(prev => prev.map(mapper));
       }
-      
+
       setActiveItem((prev: any) => ({ ...prev, tags: updateTags(prev.tags) }));
       showToast(hasTag ? "Tag removed" : "Tag added", "success");
     } catch (err) {
@@ -996,6 +1032,7 @@ export default function KathaCollectionPage() {
       setAllTags(prev => [...prev, newTag]);
       setNewTagName("");
       setIsCreatingTag(false);
+      setTagSearch(""); // Restore search clearing
       handleToggleTag(newTag);
     } catch (err) {
       showToast("Failed to create tag", "error");
@@ -1011,9 +1048,9 @@ export default function KathaCollectionPage() {
       if (sortBy === 'name') {
         comparison = (a.name || a.title || "").localeCompare(b.name || b.title || "");
       } else if (sortBy === 'date') {
-        comparison = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        comparison = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       } else if (sortBy === 'size') {
-        comparison = Number(b.size || 0) - Number(a.size || 0);
+        comparison = Number(a.size || 0) - Number(b.size || 0);
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
@@ -1136,8 +1173,8 @@ export default function KathaCollectionPage() {
                   {sortOrder === 'asc' ? <ArrowUpAZ size={14} /> : <ArrowDownZA size={14} />}
                 </button>
                 <div className="w-px h-3 bg-slate-300 dark:bg-slate-700 mx-0.5" />
-                <button 
-                  onClick={() => setShowHidden(prev => !prev)} 
+                <button
+                  onClick={() => setShowHidden(prev => !prev)}
                   className={`p-1.5 transition-colors ${showHidden ? 'text-maroon' : 'text-slate-400 hover:text-maroon'}`}
                   title={showHidden ? "Hide Invisible Items" : "Show Hidden Items"}
                 >
@@ -1257,8 +1294,8 @@ export default function KathaCollectionPage() {
                   {sortOrder === 'asc' ? <ArrowUpAZ size={13} /> : <ArrowDownZA size={13} />}
                 </button>
                 <div className="w-px h-3 bg-slate-300 dark:bg-slate-700 mx-0.5" />
-                <button 
-                  onClick={() => setShowHidden(prev => !prev)} 
+                <button
+                  onClick={() => setShowHidden(prev => !prev)}
                   className={`p-1.5 transition-colors ${showHidden ? 'text-maroon' : 'text-slate-400 hover:text-maroon'}`}
                   title={showHidden ? "Show Hidden" : "Hide Hidden"}
                 >
@@ -1283,19 +1320,22 @@ export default function KathaCollectionPage() {
                 <KathaCard
                   key={item.id}
                   item={item}
-                  onOpen={() => router.push(`/katha/${item.name}`)}
-                  onEdit={() => openInputModal('edit', { ...item, type: 'folder' })}
+                  onOpen={() => {
+                    if (item.type === 'folder') router.push(`/katha/${item.name}`);
+                    else handleFileClick(item);
+                  }}
+                  onEdit={() => openInputModal('edit', item)}
                   onDelete={() => {
-                    setItemToDelete({ ...item, type: 'folder' });
+                    setItemToDelete(item);
                     setIsConfirmModalOpen(true);
                   }}
                   onMoveUp={() => handleReorder(item, 'up')}
                   onMoveDown={() => handleReorder(item, 'down')}
-                  onMove={() => handleOpenMoveModal({ ...item, type: 'folder' })}
+                  onMove={() => handleOpenMoveModal(item)}
                   onToggleFav={() => handeToggleFav(item)}
-                  onToggleHide={() => handleToggleHide({ ...item, type: 'folder' })}
-                  onTag={() => handleOpenTagModal({ ...item, type: 'folder' })}
-                  onPin={() => handleTogglePin({ ...item, type: 'folder' })}
+                  onToggleHide={() => handleToggleHide(item)}
+                  onTag={() => handleOpenTagModal(item)}
+                  onPin={() => handleTogglePin(item)}
                 />
               ))}
             </div>
@@ -1476,15 +1516,15 @@ export default function KathaCollectionPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleInputSubmit()}
             />
           </div>
-          
+
           {(modalType === 'create_collection' || modalType === 'create_folder' || (modalType === 'edit' && activeItem?.type === 'folder')) && (
             <div className="space-y-2 mt-4">
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest px-1">
                 Cover Image (Optional)
               </p>
-              <input 
-                type="file" 
-                accept="image/*" 
+              <input
+                type="file"
+                accept="image/*"
                 onChange={(e) => setModalFile(e.target.files?.[0] || null)}
                 className="w-full text-sm text-slate-500 file:mr-4 file:py-3 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-black file:uppercase file:tracking-widest file:bg-[#8b1D1D]/10 file:text-[#8b1D1D] hover:file:bg-[#8b1D1D]/20 transition-all cursor-pointer bg-slate-50 dark:bg-slate-900 rounded-2xl border-2 border-slate-200 dark:border-slate-800 p-2"
               />
@@ -1529,9 +1569,9 @@ export default function KathaCollectionPage() {
       </Modal>
 
       {/* Favorite Selection Modal */}
-      <Modal 
-        isOpen={isFavModalOpen} 
-        onClose={() => { setIsFavModalOpen(false); setActiveFavItem(null); }} 
+      <Modal
+        isOpen={isFavModalOpen}
+        onClose={() => { setIsFavModalOpen(false); setActiveFavItem(null); }}
         title="Add to Favourites"
         maxWidth="max-w-md"
       >
@@ -1561,7 +1601,7 @@ export default function KathaCollectionPage() {
                     <ChevronRight size={16} className="text-slate-300 group-hover:text-maroon group-hover:translate-x-1 transition-all" />
                   </button>
                 ))}
-                
+
                 {!isCreatingInFav ? (
                   <button
                     onClick={() => setIsCreatingInFav(true)}
@@ -1573,12 +1613,12 @@ export default function KathaCollectionPage() {
                 ) : (
                   <div className="p-4 bg-maroon/[0.03] rounded-2xl border-2 border-maroon/20 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
                     <div className="flex items-center justify-between">
-                       <span className="text-[10px] font-black uppercase text-maroon">New Collection Name</span>
-                       <button onClick={() => setIsCreatingInFav(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14}/></button>
+                      <span className="text-[10px] font-black uppercase text-maroon">New Collection Name</span>
+                      <button onClick={() => setIsCreatingInFav(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14} /></button>
                     </div>
-                    <Input 
-                      placeholder="Enter name..." 
-                      value={newFavCollectionName} 
+                    <Input
+                      placeholder="Enter name..."
+                      value={newFavCollectionName}
                       onChange={(e) => setNewFavCollectionName(e.target.value)}
                       className="rounded-xl border-maroon/20 focus:border-maroon text-slate-800 dark:text-white"
                       autoFocus
@@ -1612,9 +1652,9 @@ export default function KathaCollectionPage() {
       >
         <div className="space-y-4">
           <div className="flex gap-2">
-            <Input 
-              placeholder="Search or create tag" 
-              value={tagSearch} 
+            <Input
+              placeholder="Search or create tag"
+              value={tagSearch}
               onChange={(e) => setTagSearch(e.target.value)}
               className="flex-1 rounded-xl border-slate-200 dark:border-slate-800"
             />
@@ -1626,19 +1666,19 @@ export default function KathaCollectionPage() {
           </div>
 
           {isCreatingTag && (
-             <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="flex items-center justify-between">
-                   <span className="text-[10px] font-black uppercase text-slate-400">Tag Preview</span>
-                   <button onClick={() => setIsCreatingTag(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14}/></button>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase text-slate-400">Tag Preview</span>
+                <button onClick={() => setIsCreatingTag(false)} className="text-slate-400 hover:text-slate-600"><XCircle size={14} /></button>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm" style={{ backgroundColor: `${newTagColor}20`, color: newTagColor, border: `1px solid ${newTagColor}40` }}>
+                  {newTagName || 'New Tag'}
                 </div>
-                <div className="flex items-center gap-3">
-                   <div className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm" style={{ backgroundColor: `${newTagColor}20`, color: newTagColor, border: `1px solid ${newTagColor}40` }}>
-                      {newTagName || 'New Tag'}
-                   </div>
-                   <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent" />
-                </div>
-                <Button onClick={handleCreateTag} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest">Create & Apply</Button>
-             </div>
+                <input type="color" value={newTagColor} onChange={(e) => setNewTagColor(e.target.value)} className="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent" />
+              </div>
+              <Button onClick={handleCreateTag} className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl h-10 font-bold uppercase text-[10px] tracking-widest">Create & Apply</Button>
+            </div>
           )}
 
           <div className="grid gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
@@ -1651,8 +1691,8 @@ export default function KathaCollectionPage() {
                   className={`p-3 rounded-xl border-2 transition-all cursor-pointer flex items-center justify-between ${isActive ? 'border-maroon bg-maroon/5 ring-1 ring-maroon/20' : 'border-slate-50 hover:border-slate-100 dark:hover:border-slate-800'}`}
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div 
-                      className="w-2.5 h-2.5 rounded-full shrink-0" 
+                    <div
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: tag.color }}
                     />
                     <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">

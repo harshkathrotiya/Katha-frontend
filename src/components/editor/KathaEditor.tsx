@@ -166,7 +166,7 @@ export default function KathaEditor({
   const [linkUrl,     setLinkUrl]     = useState("");
   const [openDD,      setOpenDD]      = useState<DD>(null);
   const [focusMode,   setFocusMode]   = useState(false);
-  const [lineHeight,  setLineHeight]  = useState("1.8");
+  const [lineHeight,  setLineHeight]  = useState("1.6");
   const [hlColor,     setHlColor]     = useState("#FEF08A"); // Last used highlight color
   const [textColor,   setTextColor]   = useState("#111827"); // Last used text color
   const [curFontSize, setCurFontSize] = useState("11");
@@ -278,6 +278,19 @@ export default function KathaEditor({
       attributes: {
         spellcheck: "false", // DRAMATIC performance improvement for 300+ page DOM nodes
       },
+      // Fix for PDF paste: ensure line breaks are treated as separate paragraph blocks
+      transformPastedText: (text) => {
+        // If there are newlines, ensure they are treated as double newlines so TipTap parses them as paragraphs
+        // avoiding the "one block with many <br>s" issue common with PDFs.
+        if (text.includes('\n') && !text.includes('\n\n')) {
+          return text.replace(/\r?\n/g, '\n\n');
+        }
+        return text;
+      },
+      transformPastedHTML: (html) => {
+        // Also cleanup common problematic HTML from Word/PDF
+        return html.replace(/<br\s*\/?>/gi, '</p><p>');
+      }
     },
     onUpdate:({editor})=>{
       const json = editor.getJSON();
@@ -456,11 +469,11 @@ export default function KathaEditor({
         .ke-doc .ProseMirror {
           outline: none;
           min-height: 800px;
-          line-height: var(--ke-lh, 1.8);
+          line-height: var(--ke-lh, 1.6);
           font-size: var(--ke-fs, 11pt);
         }
         .ke-doc .ProseMirror p {
-          margin-bottom: 0.8em;
+          margin-bottom: 0.5em;
           line-height: inherit;
         }
         .ke-doc .ProseMirror h1, .ke-doc .ProseMirror h2, .ke-doc .ProseMirror h3 {
